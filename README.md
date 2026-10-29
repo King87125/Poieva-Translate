@@ -9,8 +9,8 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.1.0/Poieva-Translate-0.1.0.dmg"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.1.0">Release notes</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.1.1/Poieva-Translate-0.1.1.dmg"><strong>Download for Mac</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.1.1">Release notes</a>
 </p>
 
 <p align="center">Apple Silicon · macOS 26+ · English / 简体中文</p>
@@ -30,12 +30,12 @@
 
 ## Get started
 
-1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.1.0/Poieva-Translate-0.1.0.dmg), open it and drag **Poieva Translate** to **Applications**.
+1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.1.1/Poieva-Translate-0.1.1.dmg), open it and drag **Poieva Translate** to **Applications**.
 2. Open the app and choose **English** or **简体中文**.
 3. Start with the translation window: type or paste some text. The built-in Apple translation service needs no account or API key. Download a language pack in **Settings → System → Language Packs** if needed.
 4. To translate text in other apps, enable **Accessibility** from **Settings → System**. The translation window works without this permission.
 
-> **Developer preview:** v0.1.0 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs.
+> **Developer preview:** v0.1.1 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
 
 ## Three ways to use it
 
@@ -82,3 +82,7 @@ Change the first two shortcuts in **Settings → Shortcuts**. Your saved shortcu
 ## More
 
 [Advanced configuration](docs/services.md) · [Build from source](docs/development.md) · [Verification notes](docs/verification.md) · [Report an issue](https://github.com/King87125/Poieva-Translate/issues)
+
+## License
+
+[MIT](LICENSE) © 2026 King87125. You may use, modify and redistribute the project, including commercially, while retaining the copyright and license notice.

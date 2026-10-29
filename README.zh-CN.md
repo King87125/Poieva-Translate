@@ -9,8 +9,8 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.1.0/Poieva-Translate-0.1.0.dmg"><strong>下载 Mac 版</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.1.0">发布说明</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.1.1/Poieva-Translate-0.1.1.dmg"><strong>下载 Mac 版</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.1.1">发布说明</a>
 </p>
 
 <p align="center">Apple Silicon（M 系列芯片）· macOS 26+ · English / 简体中文</p>
@@ -30,12 +30,12 @@
 
 ## 快速开始
 
-1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.1.0/Poieva-Translate-0.1.0.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
+1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.1.1/Poieva-Translate-0.1.1.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
 2. 首次打开时，选择 **English** 或 **简体中文**。
 3. 先在翻译窗口里输入或粘贴文字。默认使用苹果系统翻译，无需注册账户或填写密钥；缺少语言包时，在 **设置 → 系统 → 语言包** 下载。
 4. 想在其他应用里翻译，再到 **设置 → 系统 → 辅助功能** 开启权限。只使用翻译窗口，不需要这项权限。
 
-> **开发预览版：** v0.1.0 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。
+> **开发预览版：** v0.1.1 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
 
 ## 三种使用方式
 
@@ -82,3 +82,7 @@
 ## 更多
 
 [进阶配置](docs/services.md) · [从源码构建](docs/development.md) · [验证记录](docs/verification.md) · [反馈问题](https://github.com/King87125/Poieva-Translate/issues)
+
+## 开源许可
+
+[MIT](LICENSE) © 2026 King87125。允许使用、修改、分发及商用，需保留版权和许可声明。

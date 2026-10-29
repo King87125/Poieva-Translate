@@ -5,7 +5,7 @@
 ## Requirements
 
 - A Mac with the macOS 26 SDK and Swift 6 toolchain, such as current Xcode Command Line Tools.
-- The distributed v0.1.0 binary targets Apple Silicon and macOS 26+.
+- The distributed preview binary targets Apple Silicon and macOS 26+.
 - No third-party Swift packages are required.
 
 ## Build
@@ -25,7 +25,7 @@ Create a drag-to-install disk image from the signed app:
 ./scripts/package-dmg.sh
 ```
 
-The output is `dist/Poieva-Translate-0.1.0.dmg`. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution.
+The output is `dist/Poieva-Translate-0.1.1.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
 
 ## Checks
 
