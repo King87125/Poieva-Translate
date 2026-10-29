@@ -419,3 +419,6 @@
 "通用设置" = "通用设置";
 "界面语言" = "界面语言";
 "重新打开 Poieva Translate 后生效。" = "重新打开 Poieva Translate 后生效。";
+
+"自定义 AI" = "自定义 AI";
+"支持 OpenAI 兼容的 Chat Completions 接口。" = "支持 OpenAI 兼容的 Chat Completions 接口。";

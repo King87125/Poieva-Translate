@@ -163,6 +163,7 @@ private struct ServicePackageDocument: FileDocument {
 private struct ServiceEditorView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var store: TranslationServiceStore
+    private let originalAdapter: TranslationServiceAdapter?
     @Environment(\.dismiss) private var dismiss
     @State private var draft: TranslationServiceConfiguration
     @State private var key = ""
@@ -182,6 +183,7 @@ private struct ServiceEditorView: View {
 
     init(model: AppModel, store: TranslationServiceStore, configuration: TranslationServiceConfiguration) {
         self.model = model; self.store = store
+        originalAdapter = store.configurations.contains(where: { $0.id == configuration.id }) ? configuration.adapter : nil
         _draft = State(initialValue: configuration)
         _parameters = State(initialValue: configuration.parametersText)
         _httpTemplateText = State(initialValue: (configuration.http ?? HTTPTranslationTemplate()).jsonText)
@@ -208,7 +210,8 @@ private struct ServiceEditorView: View {
                         HStack(alignment: .top, spacing: 16) {
                             ConfigurationField(title: L10n.tr("服务类型")) {
                                 SelectionField(title: L10n.tr("服务类型"), selection: $draft.adapter,
-                                    options: TranslationServiceAdapter.allCases.map { SelectionOption($0, $0.name) })
+                                    options: TranslationServiceAdapter.configurationOptions(editing: originalAdapter).map { SelectionOption($0, $0.name) })
+                                    .help(draft.adapter == .openAICompatible ? L10n.tr("支持 OpenAI 兼容的 Chat Completions 接口。") : draft.adapter.name)
                             }
                             ConfigurationField(title: L10n.tr("服务名称")) {
                                 ConfigurationEntry(title: L10n.tr("服务名称"), text: $draft.name, prompt: L10n.tr("自定义名称"))

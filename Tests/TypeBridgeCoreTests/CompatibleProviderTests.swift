@@ -270,27 +270,29 @@ struct CompatibleProviderTests {
         catch { #expect(error is CancellationError) }
     }
 
-    @Test func importedOpenRouterTemplateWorksForTranslationAndAssistanceWithoutReasoningReplay() async throws {
+    @Test func userConfiguredModelWorksForTranslationAndAssistanceWithoutReasoningReplay() async throws {
         let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let data = try Data(contentsOf: project.appendingPathComponent("Examples/openrouter-nemotron-free.json"))
-        let configuration = try #require(TranslationServicePackage.decode(data).first)
+        let data = try Data(contentsOf: project.appendingPathComponent("Examples/translation-services.json"))
+        var configuration = try #require(TranslationServicePackage.decode(data).first)
+        configuration.parameters = ["reasoning": .object(["enabled": .bool(false)]), "max_tokens": .number(4096), "temperature": .number(0.2)]
+        configuration = try configuration.validated()
         #expect(configuration.isRemoteModelAPI && !configuration.jsonMode)
-        #expect(configuration.model == "nvidia/nemotron-3-ultra-550b-a55b:free")
-        #expect(configuration.endpoint.absoluteString == "https://openrouter.ai/api/v1/chat/completions")
+        #expect(configuration.model == "your-model-id")
+        #expect(configuration.endpoint.absoluteString == "https://api.example.com/v1/chat/completions")
         let content = #"{"translations":[{"id":"0","text":"你好"}]}"#
         let reply = try JSONSerialization.data(withJSONObject: ["choices": [["finish_reason": "stop", "message": [
             "content": content, "reasoning_details": [["type": "reasoning.text", "text": "unused-provider-metadata"]]
         ]]]])
         TranslationHTTPStub.configure { _ in .init(data: reply) }
         let network = session(); defer { network.invalidateAndCancel() }
-        let provider = try CompatibleTranslationProvider(configuration: configuration, session: network, credential: { "test-only-openrouter-key" })
+        let provider = try CompatibleTranslationProvider(configuration: configuration, session: network, credential: { "test-only-custom-key" })
         #expect(try await provider.translate(.init(text: "Hello", source: .english, target: .simplifiedChinese)) == "你好")
-        let helper = try CompatibleTranslationAssistant(configuration: configuration, session: network, credential: { "test-only-openrouter-key" })
+        let helper = try CompatibleTranslationAssistant(configuration: configuration, session: network, credential: { "test-only-custom-key" })
         #expect(try await helper.refine(.init(originals: ["Hello"], drafts: ["您好"], source: .english, target: .simplifiedChinese,
             guidance: .init(preferences: .init(tone: .natural)))) == ["你好"])
         #expect(TranslationHTTPStub.requests.count == 2)
         for sent in TranslationHTTPStub.requests {
-            #expect(sent.value(forHTTPHeaderField: "Authorization") == "Bearer test-only-openrouter-key")
+            #expect(sent.value(forHTTPHeaderField: "Authorization") == "Bearer test-only-custom-key")
             let body = try #require(sent.httpBody)
             let object = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
             #expect((object["reasoning"] as? [String: Bool])?["enabled"] == false)
@@ -300,6 +302,6 @@ struct CompatibleProviderTests {
             #expect((object["messages"] as? [[String: String]])?.count == 2)
             #expect(!String(decoding: body, as: UTF8.self).contains("unused-provider-metadata"))
         }
-        #expect(!String(decoding: try TranslationServicePackage.encode([configuration]), as: UTF8.self).contains("test-only-openrouter-key"))
+        #expect(!String(decoding: try TranslationServicePackage.encode([configuration]), as: UTF8.self).contains("test-only-custom-key"))
     }
 }

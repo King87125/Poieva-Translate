@@ -48,7 +48,7 @@ struct LocalServiceIntegrationTests {
             Issue.record("HTTP fixture must use loopback"); return
         }
         let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let data = try Data(contentsOf: project.appendingPathComponent("Examples/lingdong-http.json"))
+        let data = try Data(contentsOf: project.appendingPathComponent("Tests/Fixtures/http-options.json"))
         let suite = "studio.typebridge.http-integration.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
         let store = TranslationServiceStore(defaults: defaults, credentials: IntegrationCredentials())

@@ -18,6 +18,16 @@ struct ServiceConfigurationTests {
     private func configuration(_ url: String = "https://api.example.com/v1") -> TranslationServiceConfiguration {
         TranslationServiceConfiguration(name: "我的模型", baseURL: url, model: "custom-model")
     }
+    @Test func newConfigurationsOfferOnlyGenericProtocolsWhileSavedTypesRemainEditable() {
+        #expect(TranslationServiceAdapter.configurationOptions() == [.openAICompatible, .customHTTP])
+        for adapter in TranslationServiceAdapter.allCases {
+            let options = TranslationServiceAdapter.configurationOptions(editing: adapter)
+            #expect(options.contains(adapter))
+            #expect(Set(options) == Set([.openAICompatible, .customHTTP, adapter]))
+        }
+        let empty = TranslationServiceConfiguration()
+        #expect(empty.adapter == .openAICompatible && empty.baseURL.isEmpty && empty.model.isEmpty && empty.parameters.isEmpty)
+    }
     @Test func endpointAcceptsBaseOrCompletePathWithoutDoublingIt() throws {
         #expect(try configuration(" https://api.example.com/v1/ ").validated().endpoint.absoluteString == "https://api.example.com/v1/chat/completions")
         #expect(try configuration("https://api.example.com/custom/chat/completions").validated().endpoint.absoluteString == "https://api.example.com/custom/chat/completions")
@@ -92,6 +102,7 @@ struct ServiceStoreTests {
         let (d, suite) = defaults(); defer { d.removePersistentDomain(forName: suite) }
         let keys = MemoryTranslationCredentials(), store = TranslationServiceStore(defaults: d, credentials: keys)
         #expect(store.selectedID == nil)
+        #expect(store.configurations.isEmpty)
         #expect(store.activeConfiguration == nil)
         #expect(store.activeName == L10n.tr("苹果系统翻译"))
         #expect(try store.key(for: UUID()) == nil)

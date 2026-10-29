@@ -76,6 +76,7 @@ Change the first two shortcuts in **Settings → Shortcuts**. Your saved shortcu
 - Closing the window leaves Poieva in the menu bar, ready for the next translation.
 - Change the interface language in **Settings → General → Interface language**, then reopen the app.
 - Cross-app compatibility depends on the editor. If a field cannot be read reliably, select a smaller passage or paste it into the translation window. See [compatibility notes](docs/compatibility.md).
+- Apple Translate is included and needs no account or API key. To use your own online service, add a **Custom AI** (OpenAI-compatible) or **Custom HTTP Translation** configuration in **Settings → Model Management**. There are no provider presets.
 - Built-in translation runs on your Mac after its language packs are ready. If you choose an online service, your text is sent to that service. Poieva does not save a translation history.
 
 ## More

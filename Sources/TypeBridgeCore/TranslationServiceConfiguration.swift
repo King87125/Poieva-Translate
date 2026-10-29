@@ -57,9 +57,16 @@ public enum TranslationServiceAdapter: String, Codable, CaseIterable, Identifiab
     case youdao = "youdao-v3"
     case customHTTP = "custom-http"
     public var id: String { rawValue }
+    /// New configurations use generic protocols. Keep a saved legacy type editable
+    /// without offering provider-specific integrations to new users.
+    public static func configurationOptions(editing existing: Self? = nil) -> [Self] {
+        var options: [Self] = [.openAICompatible, .customHTTP]
+        if let existing, !options.contains(existing) { options.append(existing) }
+        return options
+    }
     public var name: String {
         switch self {
-        case .openAICompatible: return L10n.tr("OpenAI 兼容")
+        case .openAICompatible: return L10n.tr("自定义 AI")
         case .deepL: return "DeepL"
         case .baidu: return L10n.tr("百度通用翻译")
         case .youdao: return L10n.tr("有道文本翻译")

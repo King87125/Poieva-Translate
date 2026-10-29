@@ -65,7 +65,7 @@ Accessibility attribution can differ for a terminal-launched diagnostic process.
 | `Sources/TypeBridgeCredentialSupport` | Shared credential protocol and signing identity checks |
 | `Sources/TypeBridgeCredentials` | Fixed XPC Keychain reader |
 | `Tests` | Core regression tests and public example fixtures |
-| `Examples` | Importable service configurations without credentials |
+| `Examples` | Generic configuration format example with placeholder values |
 | `Resources` | Branding, application metadata and UI assets |
 
 Poieva Translate was originally named TypeBridge. Internal module names, the `studio.typebridge.mac` identifier and existing preference/credential namespaces are intentionally preserved for compatibility.
@@ -77,6 +77,8 @@ Interface strings live in the `en.lproj` and `zh-Hans.lproj` resources under `So
 The shared vector mark is [`poieva-mark.svg`](../Resources/Design/poieva-mark.svg). `scripts/make-icon.swift` creates the white app icon in all required sizes; the menu bar uses the same mark as a system template image. Exported artwork is in [`Resources/Branding`](../Resources/Branding).
 
 ## Extending translation
+
+New configurations currently expose only Custom AI (OpenAI-compatible Chat Completions) and Custom HTTP Translation. Provider presets are deferred; older adapters remain for saved-configuration compatibility. Protocol regression data lives under `Tests/Fixtures`, separate from the generic user example.
 
 New protocols implement `TranslationProvider` and register an adapter. Existing capture, formatting, settings and writeback can be reused. Configuration schemas and HTTP templates are described in [service configuration](services.md).
 

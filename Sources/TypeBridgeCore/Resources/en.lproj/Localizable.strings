@@ -419,3 +419,6 @@
 "通用设置" = "General";
 "界面语言" = "Interface language";
 "重新打开 Poieva Translate 后生效。" = "Changes take effect when you reopen Poieva Translate.";
+
+"自定义 AI" = "Custom AI";
+"支持 OpenAI 兼容的 Chat Completions 接口。" = "Supports OpenAI-compatible Chat Completions APIs.";

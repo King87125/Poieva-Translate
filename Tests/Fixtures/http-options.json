@@ -3,9 +3,9 @@
   "version": 3,
   "services": [
     {
-      "name": "灵动翻译",
+      "name": "HTTP protocol test fixture",
       "adapter": "custom-http",
-      "baseURL": "https://ldfy.cc/translation/language/translate",
+      "baseURL": "https://api.example.com/translation/language/translate",
       "model": "",
       "appID": "",
       "jsonMode": false,
@@ -26,8 +26,8 @@
         "successPath": "code",
         "successValue": 200,
         "errorMessages": {
-          "401": "密钥验证未通过，请检查灵动翻译 API Key。",
-          "402": "翻译额度不足，请检查灵动翻译账户余额。",
+          "401": "密钥验证未通过，请检查 API Key。",
+          "402": "翻译额度不足，请检查服务账户余额。",
           "429": "请求过于频繁，请稍后重试。"
         },
         "languageCodes": {
@@ -53,7 +53,7 @@
             "choices": [
               {
                 "value": "1",
-                "title": "DeepL",
+                "title": "Engine 1",
                 "languageCodes": {
                   "en": "EN",
                   "zh-Hans": "ZH",
@@ -74,7 +74,7 @@
               },
               {
                 "value": "2",
-                "title": "Google",
+                "title": "Engine 2",
                 "languageCodes": {
                   "en": "en",
                   "zh-Hans": "zh-cn",
@@ -92,7 +92,7 @@
               },
               {
                 "value": "3",
-                "title": "百度",
+                "title": "Engine 3",
                 "languageCodes": {
                   "en": "en",
                   "zh-Hans": "zh",
@@ -110,7 +110,7 @@
               },
               {
                 "value": "4",
-                "title": "有道",
+                "title": "Engine 4",
                 "languageCodes": {
                   "en": "en",
                   "zh-Hans": "zh-CHS",

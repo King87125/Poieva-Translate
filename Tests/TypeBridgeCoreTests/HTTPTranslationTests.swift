@@ -2,9 +2,9 @@ import Foundation
 import Testing
 @testable import TypeBridgeCore
 
-private func lingdongFixture() throws -> TranslationServiceConfiguration {
+private func customHTTPFixture() throws -> TranslationServiceConfiguration {
     let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-    return try #require(TranslationServicePackage.decode(Data(contentsOf: root.appendingPathComponent("Examples/lingdong-http.json"))).first)
+    return try #require(TranslationServicePackage.decode(Data(contentsOf: root.appendingPathComponent("Tests/Fixtures/http-options.json"))).first)
 }
 
 private final class TemplateHTTPStub: URLProtocol, @unchecked Sendable {
@@ -46,12 +46,12 @@ private final class TemplateHTTPStub: URLProtocol, @unchecked Sendable {
 }
 
 struct HTTPTemplateConfigurationTests {
-    @Test func shippedTemplateImportsAndPreservesEngineLanguageMappings() throws {
-        let configuration = try lingdongFixture(), template = try #require(configuration.http)
+    @Test func customOptionsImportAndPreserveEngineLanguageMappings() throws {
+        let configuration = try customHTTPFixture(), template = try #require(configuration.http)
         #expect(configuration.adapter == .customHTTP && configuration.model.isEmpty)
-        #expect(configuration.endpoint.absoluteString == "https://ldfy.cc/translation/language/translate")
+        #expect(configuration.endpoint.absoluteString == "https://api.example.com/translation/language/translate")
         let option = try #require(template.options.first)
-        #expect(option.defaultValue == "2" && option.choices.map(\.title) == ["DeepL", "Google", "百度", "有道"])
+        #expect(option.defaultValue == "2" && option.choices.map(\.title) == ["Engine 1", "Engine 2", "Engine 3", "Engine 4"])
         for (engine, from, to) in [("1", "ZH", "JA"), ("2", "zh-cn", "ja"), ("3", "zh", "jp"), ("4", "zh-CHS", "ja")] {
             let body = try template.render(text: "你好", source: .simplifiedChinese, target: .japanese, parameters: ["engine": .string(engine)])
             #expect(HTTPTranslationTemplate.field("sourceLang", in: body) == .string(from))
@@ -75,20 +75,20 @@ struct HTTPTemplateConfigurationTests {
         #expect(HTTPTranslationTemplate.field("stolen", in: decoded) == nil)
     }
     @Test func versionThreeRoundTripAndOlderPackagesRemainCompatible() throws {
-        var configuration = try lingdongFixture(); configuration.parameters["engine"] = .string("3")
+        var configuration = try customHTTPFixture(); configuration.parameters["engine"] = .string("3")
         let data = try TranslationServicePackage.encode([configuration])
         let root = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         #expect(root["version"] as? Int == 3)
         let decoded = try #require(TranslationServicePackage.decode(data).first)
         #expect(decoded.id != configuration.id && decoded.http == configuration.http && decoded.parameters == configuration.parameters)
         let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let old = try TranslationServicePackage.decode(Data(contentsOf: project.appendingPathComponent("Examples/professional-services.json")))
+        let old = try TranslationServicePackage.decode(Data(contentsOf: project.appendingPathComponent("Tests/Fixtures/legacy-professional-services.json")))
         #expect(old.count == 3 && old.allSatisfy { $0.http == nil })
         var wrongVersion = root; wrongVersion["version"] = 2
         #expect(throws: ServiceConfigurationFailure.self) { try TranslationServicePackage.decode(JSONSerialization.data(withJSONObject: wrongVersion)) }
     }
     @Test func unknownFieldsAndEmbeddedCredentialsAreRejectedAtEveryTemplateLevel() throws {
-        let configuration = try lingdongFixture(), template = try #require(configuration.http)
+        let configuration = try customHTTPFixture(), template = try #require(configuration.http)
         let original = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(template)) as? [String: Any])
         for field in ["apiKey", "headers", "script", "unexpected"] {
             var changed = original; changed[field] = "never-import-this"
@@ -128,7 +128,7 @@ struct HTTPTemplateConfigurationTests {
         #expect(throws: ServiceConfigurationFailure.self) { try value.validate(parameters: [:]) }
     }
     @Test func parameterValuesMustBelongToDeclaredOptionsAndNullStatusRoundTrips() throws {
-        let template = try #require(lingdongFixture().http)
+        let template = try #require(customHTTPFixture().http)
         for values: [String: ServiceJSONValue] in [["engine": .string("99")], ["engine": .number(2)], ["other": .string("2")]] {
             #expect(throws: ServiceConfigurationFailure.self) { try template.validate(parameters: values) }
         }
@@ -171,14 +171,14 @@ struct HTTPTranslationProviderTests {
             #expect(HTTPTranslationTemplate.field("model", in: body) == nil && HTTPTranslationTemplate.field("messages", in: body) == nil)
             return .init(json: .object(["code": .number(200), "data": .object(["translatedText": .string("你好")])]))
         }
-        var configuration = try lingdongFixture(); configuration.parameters["engine"] = .string("3")
+        var configuration = try customHTTPFixture(); configuration.parameters["engine"] = .string("3")
         let session = network(); defer { session.invalidateAndCancel() }
         let provider = try TranslationServiceFactory.make(configuration: configuration, session: session, credential: { "fixture-secret" })
         #expect(try await provider.translate(request()) == "你好")
         #expect(TemplateHTTPStub.requests.count == 1)
     }
     @Test func customHeaderAndNoAuthenticationUseOnlyTheConfiguredCredentialChannel() async throws {
-        var configuration = try lingdongFixture()
+        var configuration = try customHTTPFixture()
         configuration.http?.authentication = .header; configuration.http?.keyHeader = "X-Translation-Key"; configuration.http?.keyPrefix = "Token "
         TemplateHTTPStub.configure { incoming in
             #expect(incoming.value(forHTTPHeaderField: "X-Translation-Key") == "Token fixture-secret")
@@ -201,7 +201,7 @@ struct HTTPTranslationProviderTests {
         TemplateHTTPStub.configure { _ in Issue.record("Unexpected request"); return .init(json: .null) }
         let session = network(); defer { session.invalidateAndCancel() }
         var reads = 0
-        var configuration = try lingdongFixture()
+        var configuration = try customHTTPFixture()
         let provider = try HTTPTranslationProvider(configuration: configuration, session: session, credential: { reads += 1; return nil })
         await #expect(throws: ProfessionalTranslationFailure.self) { try await provider.translate(request()) }
         #expect(reads == 1 && TemplateHTTPStub.requests.isEmpty)
@@ -221,7 +221,7 @@ struct HTTPTranslationProviderTests {
             #expect(text.utf16.count <= 16)
             return .init(json: .object(["code": .number(200), "data": .object(["translatedText": .string(text)])]))
         }
-        var configuration = try lingdongFixture(); configuration.http?.maxCharacters = 16
+        var configuration = try customHTTPFixture(); configuration.http?.maxCharacters = 16
         let session = network(); defer { session.invalidateAndCancel() }
         let provider = try HTTPTranslationProvider(configuration: configuration, session: session, credential: { "fixture-secret" })
         let original = "#   Hello there 🧑🏽‍💻 please preserve spaces\r\n\r\n- Thanks  friend\n`code` https://example.com"
@@ -232,7 +232,7 @@ struct HTTPTranslationProviderTests {
         #expect(zip(progress, progress.dropFirst()).allSatisfy { $0.completedCharacters <= $1.completedCharacters })
     }
     @Test func responsePathsCanReadArraysWithoutExecutingExpressions() async throws {
-        var configuration = try lingdongFixture(); configuration.http?.responsePath = "data.0.text"; configuration.http?.successPath = ""
+        var configuration = try customHTTPFixture(); configuration.http?.responsePath = "data.0.text"; configuration.http?.successPath = ""
         TemplateHTTPStub.configure { _ in .init(json: .object(["data": .array([.object(["text": .string("你好")])])])) }
         let session = network(); defer { session.invalidateAndCancel() }
         let provider = try HTTPTranslationProvider(configuration: configuration, session: session, credential: { "fixture-secret" })
@@ -240,7 +240,7 @@ struct HTTPTranslationProviderTests {
     }
     @Test func businessAndHTTPFailuresUseSafeMessagesWithoutReflectingServerBodies() async throws {
         let session = network(); defer { session.invalidateAndCancel() }
-        let provider = try HTTPTranslationProvider(configuration: lingdongFixture(), session: session, credential: { "fixture-secret" })
+        let provider = try HTTPTranslationProvider(configuration: customHTTPFixture(), session: session, credential: { "fixture-secret" })
         for (status, code, expected) in [(200, 401, "密钥"), (200, 402, "额度"), (200, 429, "频繁"), (402, 402, "额度"), (200, 999, "成功状态")] {
             TemplateHTTPStub.configure { _ in .init(status: status, json: .object(["code": .number(Double(code)), "msg": .string("DO-NOT-REFLECT-fixture-secret")])) }
             do { _ = try await provider.translate(request()); Issue.record("Expected failure") }
@@ -250,7 +250,7 @@ struct HTTPTranslationProviderTests {
     }
     @Test func missingWrongEmptyAndMultilineFieldsNeverReturnAPartialResult() async throws {
         let session = network(); defer { session.invalidateAndCancel() }
-        let provider = try HTTPTranslationProvider(configuration: lingdongFixture(), session: session, credential: { "fixture-secret" })
+        let provider = try HTTPTranslationProvider(configuration: customHTTPFixture(), session: session, credential: { "fixture-secret" })
         for value: ServiceJSONValue in [.string(""), .string(" \t"), .string("first\nsecond"), .array([.string("你好")]), .number(200)] {
             TemplateHTTPStub.configure { _ in .init(json: .object(["code": .number(200), "data": .object(["translatedText": value])])) }
             await #expect(throws: HTTPTranslationFailure.self) { try await provider.translate(request()) }
@@ -268,7 +268,7 @@ struct HTTPTranslationProviderTests {
     @Test func cancellationStopsLaterFragmentsAndCannotPublishCompletedProgress() async throws {
         TemplateHTTPStub.configure { _ in .init(json: .object(["code": .number(200), "data": .object(["translatedText": .string("你好")])]), delay: 0.15) }
         let session = network(); defer { session.invalidateAndCancel() }
-        let provider = try HTTPTranslationProvider(configuration: lingdongFixture(), session: session, credential: { "fixture-secret" })
+        let provider = try HTTPTranslationProvider(configuration: customHTTPFixture(), session: session, credential: { "fixture-secret" })
         var progress: [TranslationProgress] = []
         let task = Task { try await provider.translateSegments(["Hello", "World"], for: request(), progress: { progress.append($0) }) }
         #expect(await eventually { TemplateHTTPStub.requests.count == 1 })
@@ -280,7 +280,7 @@ struct HTTPTranslationProviderTests {
         let suite = "studio.typebridge.http-tests.\(UUID().uuidString)", keys = HTTPMemoryCredentials()
         let defaults = try #require(UserDefaults(suiteName: suite)); defer { defaults.removePersistentDomain(forName: suite) }
         let store = TranslationServiceStore(defaults: defaults, credentials: keys)
-        var configuration = try lingdongFixture()
+        var configuration = try customHTTPFixture()
         try store.save(configuration, key: "fixture-secret", clearKey: false)
         configuration.parameters["engine"] = .string("1")
         try store.save(configuration, key: "", clearKey: false)
