@@ -1,0 +1,64 @@
+{
+  "suiteVersion": 1,
+  "date": "2026-10-28",
+  "build": 49,
+  "method": "原生工作台，苹果初译 + OpenRouter 辅助；使用连续 passage 与独立初译；全部样例为公开虚构文字",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "notes": "每项运行一次，原样保留输出；男性省略主语仍失败，不能标为稳定版质量验收完成。此前构建 48 的失败与手动重试保存在 context-quality-build48.json。",
+  "records": [
+    {
+      "id": "omitted-subject-female",
+      "source": "虽然已经很累，还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位女外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "output": "Although already exhausted, she went to the ward first to check on the child, and only returned to the office to rest after confirming the situation was stable.",
+      "contextApplied": true,
+      "manualReview": "pass"
+    },
+    {
+      "id": "omitted-subject-male",
+      "source": "虽然已经很累，还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位男外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "output": "Although already tired, still went to the ward first to check on that child, and only after confirming the situation was stable did I return to the office to rest.",
+      "contextApplied": true,
+      "manualReview": "fail"
+    },
+    {
+      "id": "explicit-first-person",
+      "source": "虽然已经很累，我还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位男外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "output": "Although I was already exhausted, I still went to the ward first to check on the child, and only returned to the office to rest after confirming his condition was stable.",
+      "contextApplied": true,
+      "manualReview": "pass"
+    },
+    {
+      "id": "terminology",
+      "source": "我们会保留翻译记忆，并在下次翻译时使用。",
+      "before": "在英文文档里，「翻译记忆」统一称作 Translation Memory。",
+      "after": "这项功能用来复用已经确认的译文。",
+      "output": "We will keep the translation memory and use it in the next translation.",
+      "contextApplied": true,
+      "manualReview": "pass"
+    },
+    {
+      "id": "layout-and-facts",
+      "source": "# 下周发布 12 项更新。\n\n- 请查看 `TypeBridge`。",
+      "before": "Here is next week's release plan.",
+      "after": "Thanks for testing with us.",
+      "output": "# 12 updates will be released next week.\n\n- Please check `TypeBridge`.",
+      "contextApplied": true,
+      "manualReview": "pass"
+    },
+    {
+      "id": "river-bank",
+      "source": "The bank was covered in mud.",
+      "before": "The river had overflowed after days of heavy rain.",
+      "after": "People stayed away from the water.",
+      "output": "河岸上沾满了泥巴。",
+      "contextApplied": true,
+      "manualReview": "pass"
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "format": "typebridge.translation-services",
+  "version": 3,
+  "services": [
+    {
+      "name": "灵动翻译",
+      "adapter": "custom-http",
+      "baseURL": "https://ldfy.cc/translation/language/translate",
+      "model": "",
+      "appID": "",
+      "jsonMode": false,
+      "parameters": {},
+      "http": {
+        "version": 1,
+        "method": "POST",
+        "authentication": "bearer",
+        "keyHeader": "X-API-Key",
+        "keyPrefix": "",
+        "request": {
+          "text": "{{text}}",
+          "sourceLang": "{{source}}",
+          "targetLang": "{{target}}",
+          "type": "{{option.engine}}"
+        },
+        "responsePath": "data.translatedText",
+        "successPath": "code",
+        "successValue": 200,
+        "errorMessages": {
+          "401": "密钥验证未通过，请检查灵动翻译 API Key。",
+          "402": "翻译额度不足，请检查灵动翻译账户余额。",
+          "429": "请求过于频繁，请稍后重试。"
+        },
+        "languageCodes": {
+          "en": "en",
+          "zh-Hans": "zh-cn",
+          "zh-Hant": "zh-tw",
+          "ja": "ja",
+          "ko": "ko",
+          "fr": "fr",
+          "de": "de",
+          "es": "es",
+          "it": "it",
+          "pt-BR": "pt",
+          "ru": "ru",
+          "ar": "ar"
+        },
+        "sourceLanguageCodes": {},
+        "options": [
+          {
+            "id": "engine",
+            "title": "翻译引擎",
+            "defaultValue": "2",
+            "choices": [
+              {
+                "value": "1",
+                "title": "DeepL",
+                "languageCodes": {
+                  "en": "EN",
+                  "zh-Hans": "ZH",
+                  "ja": "JA",
+                  "ko": "KO",
+                  "fr": "FR",
+                  "de": "DE",
+                  "es": "ES",
+                  "it": "IT",
+                  "pt-BR": "PT-BR",
+                  "ru": "RU",
+                  "ar": "AR"
+                },
+                "sourceLanguageCodes": {
+                  "zh-Hant": "ZH",
+                  "pt-BR": "PT"
+                }
+              },
+              {
+                "value": "2",
+                "title": "Google",
+                "languageCodes": {
+                  "en": "en",
+                  "zh-Hans": "zh-cn",
+                  "zh-Hant": "zh-tw",
+                  "ja": "ja",
+                  "ko": "ko",
+                  "fr": "fr",
+                  "de": "de",
+                  "es": "es",
+                  "it": "it",
+                  "pt-BR": "pt",
+                  "ru": "ru",
+                  "ar": "ar"
+                }
+              },
+              {
+                "value": "3",
+                "title": "百度",
+                "languageCodes": {
+                  "en": "en",
+                  "zh-Hans": "zh",
+                  "zh-Hant": "cht",
+                  "ja": "jp",
+                  "ko": "kor",
+                  "fr": "fra",
+                  "de": "de",
+                  "es": "spa",
+                  "it": "it",
+                  "pt-BR": "pt",
+                  "ru": "ru",
+                  "ar": "ara"
+                }
+              },
+              {
+                "value": "4",
+                "title": "有道",
+                "languageCodes": {
+                  "en": "en",
+                  "zh-Hans": "zh-CHS",
+                  "ja": "ja",
+                  "ko": "ko",
+                  "fr": "fr",
+                  "de": "de",
+                  "es": "es",
+                  "it": "it",
+                  "pt-BR": "pt",
+                  "ru": "ru",
+                  "ar": "ar"
+                }
+              }
+            ]
+          }
+        ],
+        "maxCharacters": 2000
+      }
+    }
+  ]
+}

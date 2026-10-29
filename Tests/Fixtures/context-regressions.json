@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "notes": "仅含公开虚构样例。规则检查加人工语义复核；缺少运行记录表示未测试，不计为通过。",
+  "cases": [
+    {
+      "id": "omitted-subject-female",
+      "label": "前文女性，选区省略主语",
+      "source": "虽然已经很累，还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位女外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "target": "en",
+      "matchAny": [
+        "\\bshe\\b",
+        "\\bDr\\.?\\s+Lin\\b"
+      ],
+      "mustNotMatch": [
+        "\\bI\\b",
+        "\\bwe\\b"
+      ],
+      "review": "主语指向林医生，不变成第一人称；患儿仍为男孩。"
+    },
+    {
+      "id": "omitted-subject-male",
+      "label": "只改变前文性别",
+      "source": "虽然已经很累，还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位男外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "target": "en",
+      "matchAny": [
+        "\\bhe\\b",
+        "\\bDr\\.?\\s+Lin\\b"
+      ],
+      "mustNotMatch": [
+        "\\bI\\b",
+        "\\bshe\\b"
+      ],
+      "review": "主语指向林医生，允许使用姓名代替代词。"
+    },
+    {
+      "id": "explicit-first-person",
+      "label": "原文明写我，优先于第三人称前文",
+      "source": "虽然已经很累，我还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位男外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "target": "en",
+      "mustMatch": [
+        "\\bI\\b"
+      ],
+      "review": "叙述者保持第一人称，不能让林医生成替代主语。"
+    },
+    {
+      "id": "terminology",
+      "label": "沿用前文约定的术语",
+      "source": "我们会保留翻译记忆，并在下次翻译时使用。",
+      "before": "在英文文档里，「翻译记忆」统一称作 Translation Memory。",
+      "after": "这项功能用来复用已经确认的译文。",
+      "target": "en",
+      "mustMatch": [
+        "translation\\s+memory"
+      ],
+      "review": "只翻译选区，保持我们的人称，沿用 Translation Memory。"
+    },
+    {
+      "id": "layout-and-facts",
+      "label": "段落、列表、代码与数字",
+      "source": "# 下周发布 12 项更新。\n\n- 请查看 `TypeBridge`。",
+      "before": "Here is next week's release plan.",
+      "after": "Thanks for testing with us.",
+      "target": "en",
+      "mustMatch": [
+        "^# ",
+        "\\n\\n- ",
+        "\\b12\\b"
+      ],
+      "preserve": [
+        "`TypeBridge`"
+      ],
+      "review": "保留标题、空行、列表、数字和代码，只翻译自然语言。"
+    },
+    {
+      "id": "river-bank",
+      "label": "英译中，消除 bank 歧义",
+      "source": "The bank was covered in mud.",
+      "before": "The river had overflowed after days of heavy rain.",
+      "after": "People stayed away from the water.",
+      "target": "zh-Hans",
+      "matchAny": [
+        "河岸",
+        "岸边",
+        "岸邊",
+        "堤岸"
+      ],
+      "mustNotMatch": [
+        "银行",
+        "銀行"
+      ],
+      "review": "bank 指河岸，保持过去事件语义，不把参考文字混入结果。"
+    }
+  ]
+}

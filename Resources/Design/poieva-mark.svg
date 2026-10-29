@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <title>Poieva</title>
+  <defs>
+    <linearGradient id="ink" x1="340" y1="280" x2="692" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#344363"/>
+      <stop offset="1" stop-color="#202C46"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="510" y1="650" x2="720" y2="754" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C8DFF"/>
+      <stop offset="1" stop-color="#5268ED"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#ink)" fill-rule="evenodd" d="M372 264H554C670 264 736 330 736 432C736 534 670 600 554 600H428V704C428 735 403 760 372 760C341 760 316 735 316 704V320C316 289 341 264 372 264ZM428 376V488H554C597 488 624 467 624 432C624 397 597 376 554 376H428Z"/>
+  <path fill="url(#blue)" d="M536 650H676C705 650 728 670 728 698V752C728 764 718 769 708 761L681 740H536C511 740 492 721 492 695C492 669 511 650 536 650Z"/>
+</svg>

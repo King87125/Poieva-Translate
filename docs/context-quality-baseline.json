@@ -1,0 +1,36 @@
+{
+  "suiteVersion": 1,
+  "date": "2026-10-28",
+  "build": 40,
+  "method": "原生工作台，苹果初译 + 已配置 OpenRouter 辅助",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "records": [
+    {
+      "id": "omitted-subject-female",
+      "source": "虽然已经很累，还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位女外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "output": "Although already tired, she went to the ward to check on the child first, and only returned to the office to rest after confirming the situation was stable.",
+      "contextApplied": true,
+      "manualReview": "pass"
+    },
+    {
+      "id": "omitted-subject-male",
+      "source": "虽然已经很累，还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位男外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "output": "Although already tired, Dr. Lin went to the ward to check on the boy first, and only returned to the office to rest after confirming his condition was stable.",
+      "contextApplied": true,
+      "manualReview": "pass"
+    },
+    {
+      "id": "explicit-first-person",
+      "source": "虽然已经很累，我还是先去病房看了看那个孩子，确认情况稳定后才回办公室休息。",
+      "before": "林医生是一位男外科医生，刚给一名男孩做完急诊手术。",
+      "after": "病房外，男孩的家属正在等候消息。",
+      "output": "Although he was already tired, Dr. Lin went to the ward to check on the boy first. After confirming that the condition was stable, he returned to the office to rest.",
+      "contextApplied": true,
+      "manualReview": "fail"
+    }
+  ]
+}

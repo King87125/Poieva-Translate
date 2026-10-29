@@ -1,0 +1,33 @@
+{
+  "format": "typebridge.translation-services",
+  "version": 2,
+  "services": [
+    {
+      "name": "DeepL",
+      "adapter": "deepl",
+      "baseURL": "https://api.deepl.com/v2/translate",
+      "model": "",
+      "appID": "",
+      "jsonMode": false,
+      "parameters": {}
+    },
+    {
+      "name": "百度通用翻译",
+      "adapter": "baidu-translate",
+      "baseURL": "https://fanyi-api.baidu.com/api/trans/vip/translate",
+      "model": "",
+      "appID": "YOUR_APP_ID",
+      "jsonMode": false,
+      "parameters": {}
+    },
+    {
+      "name": "有道文本翻译",
+      "adapter": "youdao-v3",
+      "baseURL": "https://openapi.youdao.com/api",
+      "model": "",
+      "appID": "YOUR_APP_ID",
+      "jsonMode": false,
+      "parameters": {}
+    }
+  ]
+}

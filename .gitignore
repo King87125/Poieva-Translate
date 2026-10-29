@@ -1,0 +1,22 @@
+.build/
+.swiftpm/
+dist/
+.DS_Store
+*.xcodeproj/
+*.xcuserstate
+*.log
+.typebridge-signing/
+__pycache__/
+*.pyc
+
+# Local credentials and signing material are never source or release assets.
+.env
+.env.*
+!.env.example
+*.keychain
+*.keychain-db
+*.p12
+*.pfx
+*.p8
+*.pem
+*.key
