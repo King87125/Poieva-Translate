@@ -39,15 +39,21 @@
 
 ## Three ways to use it
 
+*The GIFs below use real app captures from a local test editor. Frames are arranged and pauses adjusted for readability.*
+
 ### Translate and replace a draft
 
 Click a text field in another app and press **Control + Option + Return**. With no selection, Poieva translates the whole input. Select a sentence first to replace only that sentence.
 
 The translation stays in the input, ready to review and send. Press **Command + Z** in the original app to undo.
 
+![A Chinese draft is translated into English directly in the original input field](docs/demos/input-replacement.gif)
+
 ### Preview a selection
 
 Select some text and press **Control + Option + D**. A floating window shows its translation. Use **Copy Translation** to take it elsewhere; your original text stays in place.
+
+![An English sentence is selected, then its Chinese translation appears in a preview window while the source stays unchanged](docs/demos/selection-preview.gif)
 
 ### Use the translation window
 
