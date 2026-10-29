@@ -5,5 +5,6 @@ These files are test data, not a catalog of working services. Tests use intercep
 - `http-options.json`: synthetic POST JSON configuration covering option-specific language codes, errors and credential channels.
 - `legacy-professional-services.json`: v2 configuration retained to verify backward compatibility with previously saved provider adapters.
 - `context-regressions.json`: public fictional passages for evaluating context and writing preferences.
+- `profile-generation-sample.txt` and `profile-generation-response.json`: a public, fictional conversation and a fixed structured profile response. They verify speaker attribution, grounded evidence, unchecked inferred terms, editable drafts, cancellation and atomic saving. The response is a protocol fixture, not evidence of real model quality.
 
 User configuration format is documented in [`docs/services.md`](../../docs/services.md). The application offers generic Custom AI and Custom HTTP Translation configuration, with Apple Translate as the default.

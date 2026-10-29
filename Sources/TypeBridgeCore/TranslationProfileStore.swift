@@ -164,6 +164,18 @@ public final class TranslationProfileStore: ObservableObject {
         try commit(next)
         return count
     }
+    /// A reviewed generation is added and optionally activated in one write.
+    /// No source samples, evidence quotes or service credentials are persisted.
+    @discardableResult public func create(_ draft: GeneratedTranslationProfile, activate: Bool) throws -> UUID {
+        guard canModify() else { throw ServiceConfigurationFailure.busy }
+        let additions = try draft.catalog(activate: activate)
+        guard let sceneID = additions.scenes.first?.id else { throw TranslationProfileFailure.invalid }
+        var next = catalog
+        next.glossaries += additions.glossaries; next.tones += additions.tones; next.scenes += additions.scenes
+        if activate { next.activeSceneID = sceneID }
+        try commit(next)
+        return sceneID
+    }
     private func commit(_ proposed: TranslationProfileCatalog) throws {
         guard canModify() else { throw ServiceConfigurationFailure.busy }
         let next = try proposed.validated()

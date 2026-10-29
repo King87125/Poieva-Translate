@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         sender.orderOut(nil)
         if sender === window { model.workbenchVisible = false }
         if sender === settingsWindow { model.settingsVisible = false }
+        if sender === profileWindow { model.profileGenerationVisible = false }
         if sender === selectionPanel { model.selectionVisible = false }
         if sender === languagePackWindow { model.cancelPreparation() }
         if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow, profileWindow].compactMap({ $0 }).contains(where: \.isVisible) {
@@ -113,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         }
         activate(serviceWindow!)
     }
+    @objc private func showProfileGenerator() { model.profileGenerationVisible = true; showProfiles() }
     @objc private func showProfiles() {
         if profileWindow == nil {
             profileWindow = auxiliaryWindow(L10n.tr("翻译方案"), size: NSSize(width: 900, height: 600),
@@ -164,6 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         let menu = NSMenu()
         addItem(L10n.tr("翻译"), action: #selector(showWorkbench), to: menu)
         addItem(L10n.tr("翻译方案…"), action: #selector(showProfiles), to: menu)
+        addItem(L10n.tr("从样例生成…"), action: #selector(showProfileGenerator), to: menu)
         addItem(L10n.tr("设置…"), action: #selector(showSettings), to: menu)
         addItem(L10n.tr("帮助"), action: #selector(showGuide), to: menu)
         menu.addItem(.separator())
@@ -179,6 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         appMenu.addItem(.separator())
         addItem(L10n.tr("设置…"), action: #selector(showSettings), to: appMenu, key: ",")
         addItem(L10n.tr("翻译方案…"), action: #selector(showProfiles), to: appMenu)
+        addItem(L10n.tr("从样例生成…"), action: #selector(showProfileGenerator), to: appMenu)
         appMenu.addItem(.separator())
         addItem(L10n.tr("隐藏\(AppBrand.name)"), action: #selector(NSApplication.hide(_:)), to: appMenu, key: "h", target: NSApp)
         addItem(L10n.tr("退出\(AppBrand.name)"), action: #selector(quit), to: appMenu, key: "q")

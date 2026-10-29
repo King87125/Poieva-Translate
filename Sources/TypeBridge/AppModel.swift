@@ -95,6 +95,7 @@ final class AppModel: ObservableObject {
     @Published var shortcutMessage = ""
     @Published private(set) var feedback: TranslationFeedback?
     @Published var workbenchVisible = true
+    @Published var profileGenerationVisible = false
     @Published var settingsVisible = false
     @Published var selectionVisible = false
     @Published private(set) var comparisonIDs: [String] = []
@@ -814,6 +815,7 @@ final class AppModel: ObservableObject {
     func showLanguagePacks() { onShowLanguagePacks?() }
     func showServices() { onShowServices?() }
     func showProfiles() { onShowProfiles?() }
+    func showProfileGenerator() { profileGenerationVisible = true; onShowProfiles?() }
 }
 
 @MainActor

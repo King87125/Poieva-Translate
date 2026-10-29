@@ -1,0 +1,14 @@
+{
+  "status": "ready",
+  "name": "Project updates",
+  "tone": {
+    "style": "concise",
+    "instructions": "Use short, direct sentences while staying polite.",
+    "evidence": [{"quote": "Please use workspace for 工作台.", "author": "Me"}]
+  },
+  "sceneInstructions": "Keep product terminology consistent. Preserve names, numbers and paragraph structure.",
+  "terms": [
+    {"source": "工作台", "translation": "workspace", "sourceLanguage": "zh-Hans", "targetLanguage": "en", "keepOriginal": false, "basis": "observed", "evidence": "Please use workspace for 工作台."},
+    {"source": "API", "translation": "application programming interface", "sourceLanguage": "auto", "targetLanguage": "en", "keepOriginal": false, "basis": "suggested", "evidence": "Great. Could you check the API?"}
+  ]
+}

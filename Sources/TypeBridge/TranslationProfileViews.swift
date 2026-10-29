@@ -74,10 +74,11 @@ struct TranslationProfileManagementView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(L10n.tr("翻译方案")).font(.title3.weight(.semibold))
-                    Text(L10n.tr("工作台与快捷键翻译共用当前场景")).font(.caption).foregroundStyle(.secondary)
+                    Text(L10n.tr("当前场景：\(store.catalog.activeScene?.name ?? L10n.tr("通用翻译"))")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
                 Spacer()
-                Text(L10n.tr("当前场景：\(store.catalog.activeScene?.name ?? L10n.tr("通用翻译"))")).font(.callout).foregroundStyle(.secondary)
+                Button(L10n.tr("从样例生成…"), systemImage: "wand.and.stars") { model.profileGenerationVisible = true }
+                    .buttonStyle(.borderedProminent).disabled(model.committing)
             }.padding(20)
             Divider()
             HSplitView {
@@ -105,7 +106,7 @@ struct TranslationProfileManagementView: View {
                     Divider()
                     HStack {
                         Menu { ForEach(TranslationProfileKind.allCases) { kind in Button(kind.name, systemImage: kind.symbol) { add(kind) } } }
-                        label: { Label(L10n.tr("新建"), systemImage: "plus") }.fixedSize()
+                        label: { Label(L10n.tr("手动新建"), systemImage: "plus") }.fixedSize()
                         Spacer()
                         Button { deleting = true } label: { Image(systemName: "trash") }
                             .accessibilityLabel(L10n.tr("删除选中方案"))
@@ -147,6 +148,9 @@ struct TranslationProfileManagementView: View {
             }.padding(16)
         }.frame(minWidth: 800, minHeight: 480)
         .onAppear { if selection == nil { selection = (store.catalog.activeSceneID ?? store.catalog.scenes.first?.id).map { "scene:" + $0.uuidString } } }
+        .sheet(isPresented: $model.profileGenerationVisible) {
+            SampleProfileGenerationView(model: model, store: store) { id in selection = "scene:" + id.uuidString }
+        }
         .sheet(item: $editor, onDismiss: {
             if let pendingSelection, let rawID = pendingSelection.split(separator: ":").last, let id = UUID(uuidString: String(rawID)),
                (store.catalog.scenes.map(\.id) + store.catalog.glossaries.map(\.id) + store.catalog.tones.map(\.id)).contains(id) {

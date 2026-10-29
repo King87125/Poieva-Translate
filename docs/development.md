@@ -25,7 +25,7 @@ Create a drag-to-install disk image from the signed app:
 ./scripts/package-dmg.sh
 ```
 
-The output is `dist/Poieva-Translate-0.2.0.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
+The output is `dist/Poieva-Translate-0.3.0.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
 
 ## Checks
 
@@ -83,6 +83,8 @@ New configurations currently expose only Custom AI (OpenAI-compatible Chat Compl
 New protocols implement `TranslationProvider` and register an adapter. Existing capture, formatting, settings and writeback can be reused. Configuration schemas and HTTP templates are described in [service configuration](services.md).
 
 Translation profiles are defined in `TranslationProfiles.swift` and `TranslationProfileStore.swift`; their snapshots are resolved through the shared guidance pipeline for the workbench and shortcuts. User instructions are in [Translation Profiles](profiles.md).
+
+`SampleProfileGeneration.swift` uses an existing Custom AI configuration to create an ephemeral, validated draft from pasted or imported writing. The native `SampleProfileGenerationView` lets the user review evidence, edit rules and select terms before a single atomic catalog update. It does not collect chat/email accounts or train a model. Public input and response fixtures are under `Tests/Fixtures/profile-generation-*`; network tests intercept transport and do not require a provider key.
 
 The current app stores explicit writing preferences and terminology. It does not train a personal model or collect translation history. Model-assisted context handling can fail; public context regression fixtures and recorded outputs are kept under `Tests/Fixtures` and `docs`.
 
