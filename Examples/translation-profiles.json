@@ -1,0 +1,59 @@
+{
+  "format": "poieva.translation-profiles",
+  "version": 1,
+  "glossaries": [
+    {
+      "id": "BE940025-431B-4025-925A-DA8359101001",
+      "name": "产品术语示例",
+      "entries": [
+        {
+          "id": "BE940025-431B-4025-925A-DA8359101011",
+          "source": "译入",
+          "translation": "Poieva",
+          "sourceLanguage": "zh-Hans",
+          "targetLanguage": "en",
+          "preserveOriginal": false
+        },
+        {
+          "id": "BE940025-431B-4025-925A-DA8359101012",
+          "source": "工作台",
+          "translation": "workspace",
+          "sourceLanguage": "zh-Hans",
+          "targetLanguage": "en",
+          "preserveOriginal": false
+        },
+        {
+          "id": "BE940025-431B-4025-925A-DA8359101013",
+          "source": "Poieva",
+          "translation": "",
+          "sourceLanguage": "auto",
+          "targetLanguage": "auto",
+          "preserveOriginal": true
+        }
+      ]
+    }
+  ],
+  "tones": [
+    {
+      "id": "BE940025-431B-4025-925A-DA8359101002",
+      "name": "简洁表达示例",
+      "tone": "concise",
+      "target": "auto",
+      "instructions": "Use clear, short sentences. Do not add greetings or explanations.",
+      "exampleSource": "谢谢你的帮助。",
+      "exampleTranslation": "Thanks for your help."
+    }
+  ],
+  "scenes": [
+    {
+      "id": "BE940025-431B-4025-925A-DA8359101003",
+      "name": "产品沟通示例",
+      "glossaryIDs": [
+        "BE940025-431B-4025-925A-DA8359101001"
+      ],
+      "toneID": "BE940025-431B-4025-925A-DA8359101002",
+      "target": "auto",
+      "instructions": "Preserve product names, numbers, paragraphs and code."
+    }
+  ]
+}

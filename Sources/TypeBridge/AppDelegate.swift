@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
     private var languagePackWindow: NSWindow?
     private var guideWindow: NSWindow?
     private var serviceWindow: NSWindow?
+    private var profileWindow: NSWindow?
     private var feedbackPanel: NSPanel?
     private var previewPanel: NSPanel?
     private var dismissPreview: DispatchWorkItem?
@@ -30,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         model.onShowSettings = { [weak self] in self?.showSettings() }
         model.onShowLanguagePacks = { [weak self] in self?.showLanguagePacks() }
         model.onShowServices = { [weak self] in self?.showServices() }
+        model.onShowProfiles = { [weak self] in self?.showProfiles() }
         model.onFeedback = { [weak self] in self?.showFeedback() }
         model.onPreviewFeedback = { [weak self] state in self?.showFeedbackPreview(state) }
         model.start()
@@ -50,7 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         if sender === settingsWindow { model.settingsVisible = false }
         if sender === selectionPanel { model.selectionVisible = false }
         if sender === languagePackWindow { model.cancelPreparation() }
-        if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow].compactMap({ $0 }).contains(where: \.isVisible) {
+        if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow, profileWindow].compactMap({ $0 }).contains(where: \.isVisible) {
             NSApp.setActivationPolicy(.accessory)
         }
         return false
@@ -71,7 +73,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         host.sizingOptions = []
         window.contentViewController = host
         window.setContentSize(NSSize(width: min(preferredWidth, visible.width), height: min(432, visible.height - 60)))
-        window.minSize = NSSize(width: L10n.language == .english ? 840 : 680, height: 420)
+        window.minSize = NSSize(width: L10n.language == .english ? 840 : 680, height: 460)
         let toolbar = NSToolbar(identifier: "TypeBridge.CompactToolbar")
         toolbar.delegate = self
         toolbar.displayMode = .iconOnly
@@ -110,6 +112,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
                 root: ServiceManagementView(model: model, store: model.services))
         }
         activate(serviceWindow!)
+    }
+    @objc private func showProfiles() {
+        if profileWindow == nil {
+            profileWindow = auxiliaryWindow(L10n.tr("翻译方案"), size: NSSize(width: 900, height: 600),
+                root: TranslationProfileManagementView(model: model, store: model.translationProfiles))
+            profileWindow?.minSize = NSSize(width: 820, height: 520)
+        }
+        activate(profileWindow!)
     }
     private func auxiliaryWindow<Content: View>(_ title: String, size: NSSize, root: Content) -> NSWindow {
         let panel = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
@@ -153,6 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         statusItem.button?.toolTip = AppBrand.name
         let menu = NSMenu()
         addItem(L10n.tr("翻译"), action: #selector(showWorkbench), to: menu)
+        addItem(L10n.tr("翻译方案…"), action: #selector(showProfiles), to: menu)
         addItem(L10n.tr("设置…"), action: #selector(showSettings), to: menu)
         addItem(L10n.tr("帮助"), action: #selector(showGuide), to: menu)
         menu.addItem(.separator())
@@ -167,6 +178,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         addItem(L10n.tr("关于\(AppBrand.name)"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), to: appMenu, target: NSApp)
         appMenu.addItem(.separator())
         addItem(L10n.tr("设置…"), action: #selector(showSettings), to: appMenu, key: ",")
+        addItem(L10n.tr("翻译方案…"), action: #selector(showProfiles), to: appMenu)
         appMenu.addItem(.separator())
         addItem(L10n.tr("隐藏\(AppBrand.name)"), action: #selector(NSApplication.hide(_:)), to: appMenu, key: "h", target: NSApp)
         addItem(L10n.tr("退出\(AppBrand.name)"), action: #selector(quit), to: appMenu, key: "q")

@@ -35,6 +35,8 @@ struct WorkbenchView: View {
             }
             .padding(.horizontal, 24).frame(height: 44)
             .disabled(model.translatingOutsideWorkbench || model.preparing || model.isComposing)
+            WorkbenchSceneBar(model: model, store: model.translationProfiles)
+            Divider()
             GeometryReader { geometry in
                 HStack(spacing: 0) {
                     VStack(spacing: 0) {
@@ -109,7 +111,7 @@ struct WorkbenchView: View {
             .font(.system(size: 11)).padding(.horizontal, 24).frame(height: 52)
         }
         .background(Color(nsColor: .textBackgroundColor))
-        .frame(minWidth: 680, minHeight: 360)
+        .frame(minWidth: 680, minHeight: 408)
         .sheet(isPresented: $editingContext) { WorkbenchContextEditor(model: model) }
         .onChange(of: settings.inputDirection) { _, _ in model.scheduleWorkbenchTranslation() }
         .onChange(of: settings.inputTarget) { _, _ in model.scheduleWorkbenchTranslation() }

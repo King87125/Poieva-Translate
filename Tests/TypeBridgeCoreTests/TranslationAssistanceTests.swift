@@ -37,7 +37,7 @@ import Testing
         #expect(try TranslationGuidance(preferences: preferences).resolved(for: ["Nothing relevant"], target: .french) == nil)
     }
     @Test func invalidPreferencesCannotBeSaved() throws {
-        #expect(throws: (any Error).self) { try TranslationPreferences(instructions: String(repeating: "x", count: 501)).validated() }
+        #expect(throws: (any Error).self) { try TranslationPreferences(instructions: String(repeating: "x", count: 8_193)).validated() }
         #expect(throws: (any Error).self) { try TranslationPreferences(terms: [.init(source: "", translation: "x")]).validated() }
         #expect(throws: (any Error).self) { try TranslationPreferences(terms: [.init(source: "x", translation: "a\nb")]).validated() }
         #expect(throws: (any Error).self) { try TranslationPreferences(terms: [.init(source: "API", translation: "a"), .init(source: "api", translation: "b")]).validated() }
@@ -165,6 +165,35 @@ import Testing
 
 @Suite @MainActor struct AssistedTranslationTests {
     private var guidance: TranslationGuidance { .init(context: .init(before: "Previous sentence.", after: "Following sentence."), preferences: .init(tone: .natural)) }
+
+    @Test func selectedSceneReachesWorkbenchAndShortcutRequestsAndDirectAI() async throws {
+        let library = TerminologyLibrary(name: "产品", entries: [.init(source: "译入", translation: "Poieva", targetLanguage: .english)])
+        let tone = ToneConfiguration(name: "邮件", tone: .concise, instructions: "No added greeting.")
+        let scene = TranslationScene(name: "产品邮件", glossaryIDs: [library.id], toneID: tone.id)
+        let snapshot = TranslationProfileSnapshot(scene: scene, glossaries: [library], tone: tone)
+        let guidance = TranslationGuidance(context: .init(before: "产品说明"), profile: snapshot)
+        let base = AssistanceBaseStub(), helper = AssistanceHelperStub(); helper.output = ["Poieva"]
+        let provider = AssistedTranslationProvider(base: base, makeAssistant: { helper })
+        let workbench = LiveTranslationController(provider: provider, wait: {})
+        var completed = false
+        workbench.onEvent = { if case .completed = $0 { completed = true } }
+        workbench.translateNow(.init(text: "译入", direction: .chineseEnglish, source: .automatic, target: .english,
+            preserveCode: true, guidance: guidance), isComposing: false)
+        for _ in 0..<300 where !completed { try await Task.sleep(for: .milliseconds(1)) }
+        #expect(completed && helper.requests.count == 1)
+        var shortcut = try TranslationDirection.chineseEnglish.request(text: "译入", fixedTarget: .english, preserveCode: true)
+        shortcut.guidance = guidance
+        #expect(try await provider.translate(shortcut) == "Poieva")
+        #expect(helper.requests.count == 2)
+        #expect(helper.requests[0].guidance.preferences == helper.requests[1].guidance.preferences)
+        #expect(helper.requests[1].guidance.preferences.terms.first?.translation == "Poieva")
+        #expect(helper.requests[1].guidance.preferences.instructions == "No added greeting.")
+        base.supportsGuidance = true
+        var extraCalls = 0
+        let direct = AssistedTranslationProvider(base: base, makeAssistant: { extraCalls += 1; return helper })
+        _ = try await direct.translate(shortcut)
+        #expect(extraCalls == 0 && base.lastGuidance?.preferences.terms.first?.translation == "Poieva")
+    }
 
     @Test func fixedPipelineUsesExactlyOneRefinementAndPreservesLayout() async throws {
         let base = AssistanceBaseStub(), helper = AssistanceHelperStub()

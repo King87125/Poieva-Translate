@@ -51,6 +51,7 @@ final class AppModel: ObservableObject {
     let hotKeys = HotKeyManager()
     let services = TranslationServiceStore(defaults: .standard, credentials: KeychainTranslationCredentials())
     let translationPreferences = TranslationPreferenceStore(defaults: .standard)
+    lazy var translationProfiles = TranslationProfileStore(defaults: .standard, legacyPreferences: translationPreferences.settings.preferences)
     @Published var contextBefore = ""
     @Published var contextAfter = ""
     private var provider: any TranslationProvider = AppleTranslationProvider()
@@ -127,6 +128,7 @@ final class AppModel: ObservableObject {
     var onShowSettings: (() -> Void)?
     var onShowLanguagePacks: (() -> Void)?
     var onShowServices: (() -> Void)?
+    var onShowProfiles: (() -> Void)?
     var onShowSelection: (() -> Void)?
     var onFeedback: (() -> Void)?
     var onPreviewFeedback: ((TranslationFeedback) -> Void)?
@@ -160,6 +162,8 @@ final class AppModel: ObservableObject {
         services.canModify = { [weak self] in self?.committing == false }
         translationPreferences.canModify = { [weak self] in self?.committing == false }
         translationPreferences.onChange = { [weak self] in self?.changeTranslationService() }
+        translationProfiles.canModify = { [weak self] in self?.committing == false }
+        translationProfiles.onChange = { [weak self] in self?.changeTranslationService() }
         provider = configuredProvider()
         services.onActiveServiceChange = { [weak self] in self?.changeTranslationService() }
         services.onConfigurationChange = { [weak self] id in
@@ -202,9 +206,11 @@ final class AppModel: ObservableObject {
         })
     }
 
-    private func guidance(context: TranslationContext, settings: TranslationAssistanceSettings? = nil) -> TranslationGuidance? {
+    private func guidance(context: TranslationContext, settings: TranslationAssistanceSettings? = nil,
+                          profile: TranslationProfileSnapshot? = nil, capturedProfile: Bool = false) -> TranslationGuidance? {
         let settings = settings ?? translationPreferences.settings
-        let guidance = TranslationGuidance(context: settings.useContext ? context : .init(), preferences: settings.preferences)
+        let guidance = TranslationGuidance(context: settings.useContext ? context : .init(),
+            profile: capturedProfile ? profile : translationProfiles.catalog.snapshot)
         return guidance.isEmpty ? nil : guidance
     }
 
@@ -417,6 +423,7 @@ final class AppModel: ObservableObject {
         let preserveCode = settings.preserveCode
         let provider = self.provider
         let assistanceSettings = translationPreferences.settings
+        let sceneSnapshot = translationProfiles.catalog.snapshot
         let id = begin(surface: .floating, phase: .reading)
         operation = Task { [weak self] in
             guard let self else { return }
@@ -426,7 +433,7 @@ final class AppModel: ObservableObject {
                 guard self.operationID == id else { return }
                 self.feedback?.anchor = capture.feedbackAnchor ?? self.feedback?.anchor
                 var request = try direction.request(text: capture.text, fixedTarget: fixedTarget, preserveCode: preserveCode)
-                request.guidance = self.guidance(context: capture.context, settings: assistanceSettings)
+                request.guidance = self.guidance(context: capture.context, settings: assistanceSettings, profile: sceneSnapshot, capturedProfile: true)
                 let target = request.target
                 self.selectionContextStatus = capture.contextStatus
                 self.selectionExecutionInfo = nil
@@ -806,6 +813,7 @@ final class AppModel: ObservableObject {
     func showSettings() { onShowSettings?() }
     func showLanguagePacks() { onShowLanguagePacks?() }
     func showServices() { onShowServices?() }
+    func showProfiles() { onShowProfiles?() }
 }
 
 @MainActor

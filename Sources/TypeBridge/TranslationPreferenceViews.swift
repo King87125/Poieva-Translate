@@ -6,7 +6,6 @@ struct TranslationPreferenceSection: View {
     @ObservedObject var model: AppModel
     @ObservedObject var store: TranslationPreferenceStore
     @ObservedObject var services: TranslationServiceStore
-    @State private var editing = false
     @State private var error = ""
 
     private var assistantOptions: [SelectionOption<String>] {
@@ -44,83 +43,16 @@ struct TranslationPreferenceSection: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         HStack {
-            Text(L10n.tr("个人偏好"))
+            Text(L10n.tr("术语库、语气与场景"))
             Spacer()
-            Text(store.settings.preferences.tone.name + L10n.tr(" · \(store.settings.preferences.terms.count) 条术语"))
-                .foregroundStyle(.secondary).font(.callout)
-            Button(L10n.tr("编辑…")) { editing = true }.disabled(model.committing)
-        }.sheet(isPresented: $editing) { TranslationPreferenceEditor(model: model, store: store) }
+            Button(L10n.tr("管理方案…")) { model.showProfiles() }.disabled(model.committing)
+        }
         if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red) }
         if !store.issue.isEmpty { Text(store.issue).font(.caption).foregroundStyle(.red) }
     }
     private func update(_ change: (inout TranslationAssistanceSettings) -> Void) {
         var settings = store.settings; change(&settings)
         do { try store.save(settings); error = "" } catch { self.error = error.localizedDescription }
-    }
-}
-
-@MainActor
-private struct TranslationPreferenceEditor: View {
-    @ObservedObject var model: AppModel
-    @ObservedObject var store: TranslationPreferenceStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var draft: TranslationPreferences
-    @State private var error = ""
-    init(model: AppModel, store: TranslationPreferenceStore) {
-        self.model = model; self.store = store
-        _draft = State(initialValue: store.settings.preferences)
-    }
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack { Text(L10n.tr("个人偏好")).font(.headline); Spacer() }.padding(20)
-            Divider()
-            Form {
-                Section {
-                    HStack {
-                        Text(L10n.tr("适用译文"))
-                        Spacer()
-                        SelectionField(title: L10n.tr("偏好适用语言"), selection: $draft.target,
-                            options: [SelectionOption(AppLanguage.automatic, L10n.tr("所有语言"))] + AppLanguage.targets.map { SelectionOption($0, $0.name) }).frame(width: 160)
-                    }
-                    HStack {
-                        Text(L10n.tr("表达风格"))
-                        Spacer()
-                        SelectionField(title: L10n.tr("表达风格"), selection: $draft.tone,
-                            options: TranslationTone.allCases.map { SelectionOption($0, $0.name) }).frame(width: 160)
-                    }
-                }
-                Section(L10n.tr("表达偏好")) {
-                    TextEditor(text: $draft.instructions).font(.body).frame(height: 72)
-                        .accessibilityLabel(L10n.tr("表达偏好内容"))
-                    Text("\(draft.instructions.count) / 500").font(.caption).foregroundStyle(draft.instructions.count > 500 ? Color.red : Color.secondary)
-                }
-                Section(L10n.tr("术语")) {
-                    ForEach($draft.terms) { $term in
-                        HStack(spacing: 8) {
-                            TextField(L10n.tr("原文"), text: $term.source).textFieldStyle(.roundedBorder)
-                            TextField(L10n.tr("固定译法"), text: $term.translation).textFieldStyle(.roundedBorder)
-                            SelectionField(title: L10n.tr("术语目标语言"), selection: $term.target,
-                                options: [SelectionOption(AppLanguage.automatic, L10n.tr("所有语言"))] + AppLanguage.targets.map { SelectionOption($0, $0.name) }).frame(width: 112)
-                            Button { draft.terms.removeAll { $0.id == term.id } } label: { Image(systemName: "minus.circle") }
-                                .buttonStyle(.borderless).accessibilityLabel(L10n.tr("删除术语"))
-                        }
-                    }
-                    Button(L10n.tr("添加术语"), systemImage: "plus") { draft.terms.append(.init()) }.disabled(draft.terms.count >= 64)
-                }
-            }.formStyle(.grouped)
-            Divider()
-            HStack {
-                if !error.isEmpty { Text(error).font(.caption).foregroundStyle(.red).fixedSize(horizontal: false, vertical: true) }
-                Spacer()
-                Button(L10n.tr("取消")) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(L10n.tr("保存")) {
-                    do {
-                        var settings = store.settings; settings.preferences = draft
-                        try store.save(settings); dismiss()
-                    } catch { self.error = error.localizedDescription }
-                }.keyboardShortcut(.defaultAction).disabled(model.committing)
-            }.padding(16)
-        }.frame(width: 580, height: 540)
     }
 }
 

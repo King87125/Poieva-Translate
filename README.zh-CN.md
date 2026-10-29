@@ -9,8 +9,8 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.1.1/Poieva-Translate-0.1.1.dmg"><strong>下载 Mac 版</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.1.1">发布说明</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.2.0/Poieva-Translate-0.2.0.dmg"><strong>下载 Mac 版</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.2.0">发布说明</a>
 </p>
 
 <p align="center">Apple Silicon（M 系列芯片）· macOS 26+ · English / 简体中文</p>
@@ -30,12 +30,12 @@
 
 ## 快速开始
 
-1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.1.1/Poieva-Translate-0.1.1.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
+1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.2.0/Poieva-Translate-0.2.0.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
 2. 首次打开时，选择 **English** 或 **简体中文**。
 3. 先在翻译窗口里输入或粘贴文字。默认使用苹果系统翻译，无需注册账户或填写密钥；缺少语言包时，在 **设置 → 系统 → 语言包** 下载。
 4. 想在其他应用里翻译，再到 **设置 → 系统 → 辅助功能** 开启权限。只使用翻译窗口，不需要这项权限。
 
-> **开发预览版：** v0.1.1 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
+> **开发预览版：** v0.2.0 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
 
 ## 三种使用方式
 
@@ -70,6 +70,12 @@
 | 在翻译窗口立即翻译 | **⌘Return** |
 
 前两个快捷键可在 **设置 → 快捷键** 中修改。已经保存过自定义快捷键时，以设置里显示的为准。
+
+## 使用自己的术语和语气
+
+在工作台的 **场景 → 管理方案** 中，创建自己的术语库、语气配置和场景模板。一个场景可以组合多个术语库、一种语气和额外要求；选中后，工作台和全局替换、预览快捷键共用这套方案。
+
+可以导出单个术语库、语气、包含关联配置的场景，或全部方案；JSON 导入保留已有配置和当前场景。AI 翻译直接使用这些要求，苹果翻译需配置自己的 AI 辅助才能应用。详见[配置教程与截图](docs/profiles.md)。
 
 ## 几个实用说明
 

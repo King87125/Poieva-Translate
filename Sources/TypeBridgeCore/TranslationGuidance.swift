@@ -64,14 +64,14 @@ public struct TranslationPreferences: Codable, Equatable, Sendable {
     public func validated() throws -> Self {
         var copy = self
         copy.instructions = instructions.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard copy.instructions.count <= 500, terms.count <= 64,
+        guard copy.instructions.count <= 8_192, terms.count <= 64,
               Set(terms.map(\.id)).count == terms.count else { throw TranslationAssistanceFailure.invalidPreferences }
         copy.terms = try terms.map { term in
             var term = term
             term.source = term.source.trimmingCharacters(in: .whitespacesAndNewlines)
             term.translation = term.translation.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !term.source.isEmpty, !term.translation.isEmpty, term.source.count <= 80,
-                  term.translation.count <= 80, !term.source.contains(where: { $0.isNewline }),
+                  term.translation.count <= 200, !term.source.contains(where: { $0.isNewline }),
                   !term.translation.contains(where: { $0.isNewline }) else { throw TranslationAssistanceFailure.invalidPreferences }
             return term
         }
@@ -96,12 +96,13 @@ public struct TranslationPreferences: Codable, Equatable, Sendable {
 public struct TranslationGuidance: Codable, Equatable, Sendable {
     public var context: TranslationContext
     public var preferences: TranslationPreferences
-    public init(context: TranslationContext = .init(), preferences: TranslationPreferences = .init()) {
-        self.context = context; self.preferences = preferences
+    public var profile: TranslationProfileSnapshot?
+    public init(context: TranslationContext = .init(), preferences: TranslationPreferences = .init(), profile: TranslationProfileSnapshot? = nil) {
+        self.context = context; self.preferences = preferences; self.profile = profile
     }
-    public var isEmpty: Bool { context.isEmpty && preferences.isEmpty }
-    public func resolved(for texts: [String], target: AppLanguage) throws -> Self? {
-        let preferences = try preferences.validated()
+    public var isEmpty: Bool { context.isEmpty && preferences.isEmpty && profile == nil }
+    public func resolved(for texts: [String], target: AppLanguage, source: AppLanguage = .automatic) throws -> Self? {
+        let preferences = try profile?.preferences(for: texts, source: source, target: target) ?? preferences.validated()
         let result = Self(context: .init(before: context.before, after: context.after),
                           preferences: preferences.relevant(to: texts, target: target))
         return result.isEmpty ? nil : result
@@ -119,7 +120,7 @@ public enum TranslationAssistanceFailure: LocalizedError {
     case invalidPreferences, unavailable(String), tooLong, invalidResponse, changedFacts, changedPerspective
     public var errorDescription: String? {
         switch self {
-        case .invalidPreferences: return L10n.tr("偏好最多 500 字、术语最多 64 条；每条术语请填写 1–80 字的原文和译法，同一语言的术语不能重复。")
+        case .invalidPreferences: return L10n.tr("规则最多 8,192 字，单次最多 64 条术语；原文最多 80 字，固定译法最多 200 字，同一语言的术语不能重复。")
         case let .unavailable(reason): return reason
         case .tooLong: return L10n.tr("辅助模型适合短段落，请缩小选区，或在翻译偏好中关闭辅助模型。")
         case .invalidResponse: return L10n.tr("辅助模型的结果不完整，未替换原文，请重试或更换辅助模型。")
