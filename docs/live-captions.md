@@ -10,13 +10,21 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 4. 选择苹果或已配置的翻译服务，以及原文/目标语言。原文语言用于翻译方向；识别接口自行识别输入语音。字幕使用当前翻译场景的术语与语气；全局上下文开启时，仅传入之前的字幕作为参考。
 5. 点 **开始字幕**。首次采集需要用户在 macOS 确认系统音频录制权限；开启麦克风时还需要麦克风权限。只预览提词器或测试音频文件不需要录制桌面声音。
 
-字幕在主屏幕顶部中央展开，有刘海时接在刘海下方。默认显示最近两句，原文小字、译文大字；原文可关闭，字号和显示屏可调整。部分识别文字先显示，只有最终确定的句子才触发翻译，避免每个字都重复发送。
+字幕在主屏幕顶部中央展开。有刘海时，黑色表面从屏幕顶缘连续展开；收起时，字幕图标和展开按钮位于刘海两侧。默认显示当前一句，原文小字、译文大字；原文可关闭，字号和显示屏可调整。部分识别文字先显示，只有最终确定的句子才触发翻译，避免每个字都重复发送。
 
 ![顶部提词器的离线样例预览](images/live-captions-zh.jpg)
 
 *实机提词器窗口截图，内容为公开预览样例；不代表会议采集或真实语音识别质量。*
 
+![收起后的刘海两侧字幕按钮](images/live-captions-collapsed-zh.jpg)
+
 鼠标移入字幕区后显示暂停、设置、收起和停止按钮；右键也可以打开操作菜单。暂停立即关闭采音和识别连接，保留已有字幕；停止同时清空本次字幕并关闭提词器。关闭设置窗口仍可显示字幕，在应用菜单重新打开设置即可操作。窗口支持 Command + W 关闭。
+
+### Mac 顶部显示与系统灵动岛
+
+这是一块使用官方 AppKit 窗口和显示屏几何接口实现的顶部字幕界面，并非 iPhone 的系统 Dynamic Island 组件。苹果在 Mac 上提供的 Live Activities 是从配对 iPhone 同步到菜单栏的实时活动；Poieva 的本机语音字幕采用独立的顶部窗口，不依赖 iPhone。刘海尺寸和位置通过 `NSScreen.safeAreaInsets`、`auxiliaryTopLeftArea` 和 `auxiliaryTopRightArea` 获取，不写死某款 Mac 的尺寸。
+
+参考：[Apple Live Activities](https://developer.apple.com/design/human-interface-guidelines/live-activities)、[NSScreen 安全区域](https://developer.apple.com/documentation/appkit/nsscreen/safeareainsets)、[刘海左侧可用区域](https://developer.apple.com/documentation/appkit/nsscreen/auxiliarytopleftarea-uglc)。
 
 ## 先看效果和测试接口
 
@@ -49,7 +57,7 @@ Poieva 不将音频或字幕写入历史、日志或配置文件。内存中只�
 
 ![公开音频测试的识别原文与实际苹果翻译](images/live-captions-audio-test-zh.jpg)
 
-*识别原文由本机固定协议样例返回，中文来自实际苹果翻译。文件测试完成后自动暂停并关闭连接。*
+*v0.4.0 链路验收截图，当前顶部样式见上方预览图。识别原文由本机固定协议样例返回，中文来自实际苹果翻译。文件测试完成后自动暂停并关闭连接。*
 
 本机样例不是语音识别模型，不能证明识别准确率或云端延迟。按用户安排，真实语音 API 稍后配置；腾讯会议、飞书、浏览器的实际声音采集、音频设备切换、长时间运行、全屏与多屏组合仍需在用户授权的公开测试中逐项验收。受保护视频的声音可能无法采集，首版不承诺所有视频或会议应用兼容。
 
@@ -57,7 +65,9 @@ Poieva 不将音频或字幕写入历史、日志或配置文件。内存中只�
 
 Open **Live Captions** from the translation window’s toolbar or the app/menu-bar menu. Add your own speech recognition endpoint under **Model Management → Speech Recognition**, then select an audio source, your translator and target language. Speech configurations are separate from existing text translation and assistant configurations. The first release requires a **Realtime transcription-compatible WebSocket API**, with transcription sessions, 24 kHz mono PCM16 input and manual turn commits. A text-only model or ordinary translation endpoint is not sufficient.
 
-Start captions to request system audio recording permission; optionally include your microphone as a separate recognition connection. A dark teleprompter expands below the notch or at the top of a display without a notch. It shows recent source/translated text, supports collapse, pause, text size and display selection, and does not take keyboard focus. Translation reuses Apple or your existing configured service and the active scene. Browser audio is captured per application, not per tab.
+Start captions to request system audio recording permission; optionally include your microphone as a separate recognition connection. A continuous dark surface expands from the display edge around the notch, with compact controls on either side when collapsed. On displays without a notch, it appears below the menu bar. It shows the current source/translated sentence, supports collapse, pause, text size and display selection, and does not take keyboard focus. Translation reuses Apple or your existing configured service and the active scene. Browser audio is captured per application, not per tab.
+
+The top display uses public AppKit window and screen-geometry APIs; it is not the system iPhone Dynamic Island. Apple's Live Activities on Mac are mirrored from a paired iPhone into the menu bar. Poieva's local captions do not require an iPhone.
 
 **Preview Teleprompter** is an offline, explicitly labeled sample. **Test an Audio File** sends the chosen file to your selected recognition service and translator, accepts up to 60 seconds, and automatically pauses after the final result. Only final transcripts are translated. Pausing stops capture and closes sockets while retaining current text; stopping clears the session. No audio or captions are saved to history. Remote service retention and charges are governed by that service.
 

@@ -9,8 +9,8 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.0/Poieva-Translate-0.4.0.dmg"><strong>下载 Mac 版</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.0">发布说明</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.1/Poieva-Translate-0.4.1.dmg"><strong>下载 Mac 版</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.1">发布说明</a>
 </p>
 
 <p align="center">Apple Silicon（M 系列芯片）· macOS 26+ · English / 简体中文</p>
@@ -31,12 +31,12 @@
 
 ## 快速开始
 
-1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.0/Poieva-Translate-0.4.0.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
+1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.1/Poieva-Translate-0.4.1.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
 2. 首次打开时，选择 **English** 或 **简体中文**。
 3. 先在翻译窗口里输入或粘贴文字。默认使用苹果系统翻译，无需注册账户或填写密钥；缺少语言包时，在 **设置 → 系统 → 语言包** 下载。
 4. 想在其他应用里翻译，再到 **设置 → 系统 → 辅助功能** 开启权限。只使用翻译窗口，不需要这项权限。
 
-> **开发预览版：** v0.4.0 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
+> **开发预览版：** v0.4.1 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
 
 ## 三种使用方式
 
@@ -82,7 +82,7 @@
 
 ## 顶部实时字幕
 
-从工具栏或菜单栏打开 **实时字幕**，先点 **预览提词器**，不录音、不联网即可查看顶部显示效果。实际识别声音时，在 **模型管理 → 语音识别** 添加自己的 **Realtime 转写兼容 API**，选择声音来源和翻译服务后开始。字幕在刘海下方展开，可调整字号、原文显示和显示屏，随时暂停或收起。
+从工具栏或菜单栏打开 **实时字幕**，先点 **预览提词器**，不录音、不联网即可查看顶部显示效果。实际识别声音时，在 **模型管理 → 语音识别** 添加自己的 **Realtime 转写兼容 API**，选择声音来源和翻译服务后开始。当前一句字幕从屏幕顶缘贴合刘海展开，收起后按钮位于刘海两侧；可调整字号、原文显示和显示屏，随时暂停。
 
 开始后音频才会发送到所选识别服务；语音识别服务需单独配置，和免费苹果文字翻译分开。详见[使用教程](docs/live-captions.md)，包含会议应用、浏览器等场景目前的实际验收范围。
 
