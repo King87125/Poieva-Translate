@@ -26,6 +26,10 @@ cp .build/release/TypeBridge "$STAGED_APP/Contents/MacOS/TypeBridge"
 cp Resources/Info.plist "$STAGED_APP/Contents/Info.plist"
 cp -R Resources/Design "$STAGED_APP/Contents/Resources/Design"
 cp LICENSE "$STAGED_APP/Contents/Resources/LICENSE"
+for locale in en zh-Hans; do
+    mkdir -p "$STAGED_APP/Contents/Resources/$locale.lproj"
+    cp "Resources/$locale.lproj/InfoPlist.strings" "$STAGED_APP/Contents/Resources/$locale.lproj/InfoPlist.strings"
+done
 cp -R .build/release/TypeBridge_TypeBridgeCore.bundle "$STAGED_APP/Contents/Resources/TypeBridge_TypeBridgeCore.bundle"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $NEXT_BUILD" "$STAGED_APP/Contents/Info.plist"
 swift scripts/make-icon.swift "$PROJECT_DIR/.build/AppIcon.iconset" "$STAGED_APP/Contents/Resources/AppIcon.icns"

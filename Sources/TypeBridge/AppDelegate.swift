@@ -14,10 +14,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
     private var guideWindow: NSWindow?
     private var serviceWindow: NSWindow?
     private var profileWindow: NSWindow?
+    private var captionWindow: NSWindow?
+    private var captionIsland: CaptionIslandController?
     private var feedbackPanel: NSPanel?
     private var previewPanel: NSPanel?
     private var dismissPreview: DispatchWorkItem?
     private let settingsItemID = NSToolbarItem.Identifier("TypeBridge.Settings")
+    private let captionsItemID = NSToolbarItem.Identifier("TypeBridge.Captions")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppBrand.installApplicationIcon()
@@ -32,6 +35,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         model.onShowLanguagePacks = { [weak self] in self?.showLanguagePacks() }
         model.onShowServices = { [weak self] in self?.showServices() }
         model.onShowProfiles = { [weak self] in self?.showProfiles() }
+        model.onShowCaptions = { [weak self] in self?.showCaptions() }
+        model.captions.onShowSettings = { [weak self] in self?.showCaptions() }
+        model.captions.onShowIsland = { [weak self] in
+            guard let self else { return }
+            if self.captionIsland == nil { self.captionIsland = CaptionIslandController(model: self.model.captions) }
+            self.captionIsland?.show()
+        }
         model.onFeedback = { [weak self] in self?.showFeedback() }
         model.onPreviewFeedback = { [weak self] state in self?.showFeedbackPreview(state) }
         model.start()
@@ -53,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         if sender === profileWindow { model.profileGenerationVisible = false }
         if sender === selectionPanel { model.selectionVisible = false }
         if sender === languagePackWindow { model.cancelPreparation() }
-        if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow, profileWindow].compactMap({ $0 }).contains(where: \.isVisible) {
+        if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow, profileWindow, captionWindow].compactMap({ $0 }).contains(where: \.isVisible) {
             NSApp.setActivationPolicy(.accessory)
         }
         return false
@@ -115,6 +125,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         activate(serviceWindow!)
     }
     @objc private func showProfileGenerator() { model.profileGenerationVisible = true; showProfiles() }
+    @objc private func showCaptions() {
+        if captionWindow == nil {
+            let captions = model.captions
+            captionWindow = auxiliaryWindow(L10n.tr("实时字幕"), size: NSSize(width: 620, height: 700), root:
+                LiveCaptionSettingsView(app: model, model: captions, settings: captions.settings, speech: model.speechServices, translations: model.services))
+            captionWindow?.minSize = NSSize(width: 600, height: 640)
+        }
+        activate(captionWindow!)
+    }
     @objc private func showProfiles() {
         if profileWindow == nil {
             profileWindow = auxiliaryWindow(L10n.tr("翻译方案"), size: NSSize(width: 900, height: 600),
@@ -141,9 +160,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         panel.makeKeyAndOrderFront(nil)
     }
 
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [.flexibleSpace, settingsItemID] }
-    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [.flexibleSpace, settingsItemID] }
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [.flexibleSpace, captionsItemID, settingsItemID] }
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] { [.flexibleSpace, captionsItemID, settingsItemID] }
     func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        if itemIdentifier == captionsItemID {
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = L10n.tr("实时字幕"); item.toolTip = L10n.tr("实时字幕")
+            item.image = NSImage(systemSymbolName: "captions.bubble", accessibilityDescription: L10n.tr("实时字幕"))
+            item.target = self; item.action = #selector(showCaptions); item.isBordered = false
+            return item
+        }
         guard itemIdentifier == settingsItemID else { return nil }
         let item = NSToolbarItem(itemIdentifier: itemIdentifier)
         item.label = L10n.tr("设置")
@@ -158,6 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         return item
     }
     @objc private func quit() { NSApp.terminate(nil) }
+    @objc private func closeCurrentWindow() { NSApp.keyWindow?.performClose(nil) }
 
     private func createStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -165,6 +192,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         statusItem.button?.toolTip = AppBrand.name
         let menu = NSMenu()
         addItem(L10n.tr("翻译"), action: #selector(showWorkbench), to: menu)
+        addItem(L10n.tr("实时字幕…"), action: #selector(showCaptions), to: menu)
         addItem(L10n.tr("翻译方案…"), action: #selector(showProfiles), to: menu)
         addItem(L10n.tr("从样例生成…"), action: #selector(showProfileGenerator), to: menu)
         addItem(L10n.tr("设置…"), action: #selector(showSettings), to: menu)
@@ -181,6 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         addItem(L10n.tr("关于\(AppBrand.name)"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), to: appMenu, target: NSApp)
         appMenu.addItem(.separator())
         addItem(L10n.tr("设置…"), action: #selector(showSettings), to: appMenu, key: ",")
+        addItem(L10n.tr("实时字幕…"), action: #selector(showCaptions), to: appMenu)
         addItem(L10n.tr("翻译方案…"), action: #selector(showProfiles), to: appMenu)
         addItem(L10n.tr("从样例生成…"), action: #selector(showProfileGenerator), to: appMenu)
         appMenu.addItem(.separator())
@@ -200,6 +229,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         for (title, selector, key) in actions { editMenu.addItem(withTitle: title, action: selector, keyEquivalent: key) }
         editItem.submenu = editMenu
         menu.addItem(editItem)
+        let windowItem = NSMenuItem()
+        let windowMenu = NSMenu(title: L10n.tr("窗口"))
+        addItem(L10n.tr("关闭窗口"), action: #selector(closeCurrentWindow), to: windowMenu, key: "w")
+        windowItem.submenu = windowMenu; menu.addItem(windowItem)
         NSApp.mainMenu = menu
     }
 

@@ -25,7 +25,7 @@ Create a drag-to-install disk image from the signed app:
 ./scripts/package-dmg.sh
 ```
 
-The output is `dist/Poieva-Translate-0.3.0.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
+The output is `dist/Poieva-Translate-0.4.0.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
 
 ## Checks
 
@@ -87,6 +87,12 @@ Translation profiles are defined in `TranslationProfiles.swift` and `Translation
 `SampleProfileGeneration.swift` uses an existing Custom AI configuration to create an ephemeral, validated draft from pasted or imported writing. The native `SampleProfileGenerationView` lets the user review evidence, edit rules and select terms before a single atomic catalog update. It does not collect chat/email accounts or train a model. Public input and response fixtures are under `Tests/Fixtures/profile-generation-*`; network tests intercept transport and do not require a provider key.
 
 The current app stores explicit writing preferences and terminology. It does not train a personal model or collect translation history. Model-assisted context handling can fail; public context regression fixtures and recorded outputs are kept under `Tests/Fixtures` and `docs`.
+
+## Live caption development
+
+`CaptionAudioCapture.swift` uses Core Audio process taps and optional AVAudioEngine microphone input. Each input is converted to 24 kHz mono PCM16 and handled separately. `RealtimeTranscription.swift` implements transcription-only WebSocket sessions; `CaptionTranslationController.swift` correlates items, bounds the queue and reuses `TranslationProvider`. The borderless nonactivating island and settings are in `CaptionIsland.swift` and `LiveCaptionViews.swift`.
+
+For loopback WebSocket tests, start `python3 scripts/mock-caption-service.py`, then run `POIEVA_TEST_SPEECH_URL=ws://127.0.0.1:19084/v1/realtime ./scripts/test.sh --filter Caption`. This server validates wire behavior and returns a fixed public transcript; it is not a speech model. Use only public synthetic audio with it. The UI also supports explicit audio-file replay to test conversion, networking, translation and display without recording the desktop or microphone. [Configuration and limits](live-captions.md).
 
 ## Credential service updates
 

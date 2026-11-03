@@ -211,6 +211,12 @@ struct SettingsView: View {
                 }
             }
             Section(L10n.tr("模型管理")) { ServiceSettingsSection(model: model, store: model.services) }
+            Section(L10n.tr("实时字幕")) {
+                HStack {
+                    Text(L10n.tr("会议和视频的顶部双语字幕")); Spacer()
+                    Button(L10n.tr("打开…")) { model.showCaptions() }
+                }
+            }
             Section(L10n.tr("翻译偏好")) {
                 TranslationPreferenceSection(model: model, store: model.translationPreferences, services: model.services)
             }

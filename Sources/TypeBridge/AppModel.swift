@@ -50,6 +50,22 @@ final class AppModel: ObservableObject {
     let textAccess = TextAccess()
     let hotKeys = HotKeyManager()
     let services = TranslationServiceStore(defaults: .standard, credentials: KeychainTranslationCredentials())
+    let speechServices = SpeechServiceStore(defaults: .standard, credentials: KeychainTranslationCredentials())
+    @Published var managingSpeechServices = false
+    lazy var captions = LiveCaptionModel(
+        settings: CaptionSettings(defaults: .standard, defaultTranslator: services.selectedID?.uuidString ?? "apple"),
+        speechServices: speechServices, recipe: { [weak self] id, source, target in
+            guard let self else {
+                return CaptionTranslationRecipe(provider: UnavailableTranslationProvider(error: CaptionFailure.unavailable),
+                    request: { text, _ in TranslationRequest(text: text, source: source, target: target) })
+            }
+            let provider = self.workbenchProvider(id), snapshot = self.translationProfiles.catalog.snapshot
+            let useContext = self.translationPreferences.settings.useContext
+            return CaptionTranslationRecipe(provider: provider, request: { text, before in
+                let guidance = TranslationGuidance(context: useContext ? TranslationContext(before: before) : .init(), profile: snapshot)
+                return TranslationRequest(text: text, source: source, target: target, preserveCode: true, guidance: guidance.isEmpty ? nil : guidance)
+            })
+        })
     let translationPreferences = TranslationPreferenceStore(defaults: .standard)
     lazy var translationProfiles = TranslationProfileStore(defaults: .standard, legacyPreferences: translationPreferences.settings.preferences)
     @Published var contextBefore = ""
@@ -130,6 +146,7 @@ final class AppModel: ObservableObject {
     var onShowLanguagePacks: (() -> Void)?
     var onShowServices: (() -> Void)?
     var onShowProfiles: (() -> Void)?
+    var onShowCaptions: (() -> Void)?
     var onShowSelection: (() -> Void)?
     var onFeedback: (() -> Void)?
     var onPreviewFeedback: ((TranslationFeedback) -> Void)?
@@ -222,6 +239,7 @@ final class AppModel: ObservableObject {
     }
 
     private func changeTranslationService() {
+        captions.configurationChanged()
         if preparing { cancelPreparation() }
         liveTranslation.suspend()
         operationID = UUID()
@@ -323,6 +341,7 @@ final class AppModel: ObservableObject {
     }
 
     func shutdown() {
+        captions.stop()
         permissionTimer?.invalidate()
         liveTranslation.suspend()
         comparisons.suspend()
@@ -813,7 +832,9 @@ final class AppModel: ObservableObject {
 
     func showSettings() { onShowSettings?() }
     func showLanguagePacks() { onShowLanguagePacks?() }
-    func showServices() { onShowServices?() }
+    func showServices() { managingSpeechServices = false; onShowServices?() }
+    func showSpeechServices() { managingSpeechServices = true; onShowServices?() }
+    func showCaptions() { onShowCaptions?() }
     func showProfiles() { onShowProfiles?() }
     func showProfileGenerator() { profileGenerationVisible = true; onShowProfiles?() }
 }

@@ -27,6 +27,22 @@ struct ServiceSettingsSection: View {
 struct ServiceManagementView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var store: TranslationServiceStore
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker(L10n.tr("配置用途"), selection: $model.managingSpeechServices) {
+                Text(L10n.tr("翻译与辅助")).tag(false)
+                Text(L10n.tr("语音识别")).tag(true)
+            }.pickerStyle(.segmented).labelsHidden().padding([.horizontal, .top], 20)
+            if model.managingSpeechServices { SpeechServiceManagementView(store: model.speechServices) }
+            else { TranslationServiceManagementView(model: model, store: store) }
+        }.frame(minWidth: 560, minHeight: 440)
+    }
+}
+
+@MainActor
+private struct TranslationServiceManagementView: View {
+    @ObservedObject var model: AppModel
+    @ObservedObject var store: TranslationServiceStore
     @State private var selection: String? = "apple"
     @State private var editing: TranslationServiceConfiguration?
     @State private var confirmingDelete = false

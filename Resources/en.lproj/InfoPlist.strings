@@ -1,0 +1,2 @@
+"NSAudioCaptureUsageDescription" = "Poieva captures the selected app's audio for live captions and sends it to your configured speech recognition service only after you start.";
+"NSMicrophoneUsageDescription" = "Include your microphone in live captions when you enable it. Audio is sent to your configured speech recognition service.";

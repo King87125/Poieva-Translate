@@ -9,8 +9,8 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.3.0/Poieva-Translate-0.3.0.dmg"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.3.0">Release notes</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.0/Poieva-Translate-0.4.0.dmg"><strong>Download for Mac</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.0">Release notes</a>
 </p>
 
 <p align="center">Apple Silicon · macOS 26+ · English / 简体中文</p>
@@ -27,15 +27,16 @@
 - **Go both ways.** Chinese ↔ English mode chooses the direction automatically. Other target languages are available too.
 - **Keep the structure.** Preserve paragraphs, lists, code and links, plus text styling when the editor exposes it.
 - **Make it yours.** Choose your shortcuts, interface language and loading animation. Optionally show results from several selected services.
+- **Live captions at the top of your screen.** Choose an audio source, connect your speech recognition API and reuse your translator in a notch-style teleprompter. An offline preview is included. [Setup and validation scope](docs/live-captions.md).
 
 ## Get started
 
-1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.3.0/Poieva-Translate-0.3.0.dmg), open it and drag **Poieva Translate** to **Applications**.
+1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.0/Poieva-Translate-0.4.0.dmg), open it and drag **Poieva Translate** to **Applications**.
 2. Open the app and choose **English** or **简体中文**.
 3. Start with the translation window: type or paste some text. The built-in Apple translation service needs no account or API key. Download a language pack in **Settings → System → Language Packs** if needed.
 4. To translate text in other apps, enable **Accessibility** from **Settings → System**. The translation window works without this permission.
 
-> **Developer preview:** v0.3.0 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
+> **Developer preview:** v0.4.0 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
 
 ## Three ways to use it
 
@@ -78,6 +79,16 @@ Open **Scene → Manage Profiles → Create from Samples**. Paste a conversation
 You can also create profiles manually. Combine several glossaries with a tone and writing rules, then select a scene. The same choice applies to global replacement and preview shortcuts.
 
 Export a glossary, a tone, a scene with its linked configuration, or all profiles as JSON. Importing keeps your existing profiles and active scene. AI translation uses these rules directly; Apple translation needs your configured AI assistant to apply them. See the [setup guide and screenshot](docs/profiles.md).
+
+## Live captions
+
+Open **Live Captions** from the toolbar or menu bar. Start with **Preview Teleprompter** to see the top-of-screen display without recording or networking. For audio captions, add your own **Realtime transcription-compatible API** in **Model Management → Speech Recognition**, choose an audio source and translator, then start. The original and translation appear below the notch; text size, original-text visibility and display are adjustable.
+
+Audio goes to your selected recognition service only after starting. Speech recognition is separate from Apple’s included text translation. [Read the setup guide](docs/live-captions.md), including current live-testing limits for meeting apps and browsers.
+
+![The top teleprompter showing an explicitly labeled offline bilingual sample](docs/images/live-captions-zh.jpg)
+
+*Actual app capture with public offline sample text; meeting capture and cloud recognition still require live validation.*
 
 ## A few useful details
 

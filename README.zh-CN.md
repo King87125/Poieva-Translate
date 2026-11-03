@@ -9,8 +9,8 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.3.0/Poieva-Translate-0.3.0.dmg"><strong>下载 Mac 版</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.3.0">发布说明</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.0/Poieva-Translate-0.4.0.dmg"><strong>下载 Mac 版</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.0">发布说明</a>
 </p>
 
 <p align="center">Apple Silicon（M 系列芯片）· macOS 26+ · English / 简体中文</p>
@@ -27,15 +27,16 @@
 - **中英双向互译。** 自动判断中文或英文，也可以指定其他目标语言。
 - **保留原来的结构。** 保留段落、列表、代码和链接；编辑器提供文字样式时，也会尽量保留。
 - **按自己的习惯使用。** 自定义快捷键、界面语言和加载动效；还可以勾选多个翻译服务，分别查看译文。
+- **顶部实时字幕。** 选择声音来源，配置自己的语音识别 API，复用现有翻译服务，在刘海下方显示双语提词器；也可先离线预览。[设置与验收范围](docs/live-captions.md)。
 
 ## 快速开始
 
-1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.3.0/Poieva-Translate-0.3.0.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
+1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.0/Poieva-Translate-0.4.0.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
 2. 首次打开时，选择 **English** 或 **简体中文**。
 3. 先在翻译窗口里输入或粘贴文字。默认使用苹果系统翻译，无需注册账户或填写密钥；缺少语言包时，在 **设置 → 系统 → 语言包** 下载。
 4. 想在其他应用里翻译，再到 **设置 → 系统 → 辅助功能** 开启权限。只使用翻译窗口，不需要这项权限。
 
-> **开发预览版：** v0.3.0 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
+> **开发预览版：** v0.4.0 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
 
 ## 三种使用方式
 
@@ -78,6 +79,16 @@
 也可以手动创建配置。一个场景可以组合多个术语库、一种语气和额外要求；选中后，工作台和全局替换、预览快捷键共用这套方案。
 
 可以导出单个术语库、语气、包含关联配置的场景，或全部方案；JSON 导入保留已有配置和当前场景。AI 翻译直接使用这些要求，苹果翻译需配置自己的 AI 辅助才能应用。详见[配置教程与截图](docs/profiles.md)。
+
+## 顶部实时字幕
+
+从工具栏或菜单栏打开 **实时字幕**，先点 **预览提词器**，不录音、不联网即可查看顶部显示效果。实际识别声音时，在 **模型管理 → 语音识别** 添加自己的 **Realtime 转写兼容 API**，选择声音来源和翻译服务后开始。字幕在刘海下方展开，可调整字号、原文显示和显示屏，随时暂停或收起。
+
+开始后音频才会发送到所选识别服务；语音识别服务需单独配置，和免费苹果文字翻译分开。详见[使用教程](docs/live-captions.md)，包含会议应用、浏览器等场景目前的实际验收范围。
+
+![顶部提词器的离线双语样例预览](docs/images/live-captions-zh.jpg)
+
+*实机窗口截图，使用公开离线预览文字；会议采集和云端识别仍待真实环境验收。*
 
 ## 几个实用说明
 

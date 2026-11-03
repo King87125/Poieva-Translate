@@ -1,0 +1,2 @@
+"NSAudioCaptureUsageDescription" = "Poieva 在你开始字幕后采集所选应用的声音，并发送至你配置的语音识别服务，用于实时字幕。";
+"NSMicrophoneUsageDescription" = "开启后，将你的麦克风声音一并发送至你配置的语音识别服务，生成实时字幕。";
