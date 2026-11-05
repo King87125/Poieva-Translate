@@ -81,7 +81,7 @@ Poieva 不将音频或字幕写入历史、日志或配置文件。内存中只�
 
 *v0.4.0 链路验收截图，当前顶部样式见上方预览图。识别原文由本机固定协议样例返回，中文来自实际苹果翻译。文件测试完成后自动暂停并关闭连接。*
 
-本机样例不是语音识别模型，不能证明识别准确率或云端延迟。用户自行配置阿里云后实际反馈可用、速度可接受；具体声源和量化延迟尚未确认。腾讯会议远端音频、单独麦克风、飞书、浏览器、音频设备切换、长时间运行、全屏与多屏组合仍需分别记录验收。受保护视频的声音可能无法采集，首版不承诺所有视频或会议应用兼容。
+本机样例不是语音识别模型，不能证明识别准确率或云端延迟。用户自行配置阿里云并勾选「同时识别我的麦克风」后，实际反馈可用、速度可接受。麦克风识别与翻译路径已获得真实使用反馈；延迟尚未量化。腾讯会议远端音频、飞书、浏览器、音频设备切换、长时间运行、全屏与多屏组合仍需分别验收。受保护视频的声音可能无法采集，首版不承诺所有视频或会议应用兼容。
 
 ## English
 
@@ -97,4 +97,4 @@ The top display uses public AppKit window and screen-geometry APIs; it is not th
 
 The client has bounded buffers and translation queues, correlates results by item ID, and rejects late results after cancellation. Errors pause the session without automatic retries or reconnects. Recognition does not run a local AI model. The audio tap does not replace default audio devices or install a virtual driver.
 
-Validation used public synthetic audio, fixed loopback WebSocket responses and real Apple translation. This checks the application pipeline, not speech recognition quality. After configuring Alibaba Qwen independently, the user reported that it worked with acceptable perceived speed; the exact audio source and measured latency were not confirmed. To test Tencent Meeting's remote audio, join your own meeting from a second device, mute the computer microphone, select Tencent Meeting as the source and read the public English sample above from the other device. A single-person microphone test covers a separate input path. Long sessions and device/display combinations still need live testing. See [verification notes](verification.md).
+Validation used public synthetic audio, fixed loopback WebSocket responses and real Apple translation. This checks the application pipeline, not speech recognition quality. After configuring Alibaba Qwen independently and enabling Include My Microphone, the user reported working microphone transcription and translation with acceptable perceived speed. Latency has not been measured; Tencent Meeting remote audio remains a separate pending test. To test Tencent Meeting's remote audio, join your own meeting from a second device, mute the computer microphone, select Tencent Meeting as the source and read the public English sample above from the other device. A single-person microphone test covers a separate input path. Long sessions and device/display combinations still need live testing. See [verification notes](verification.md).
