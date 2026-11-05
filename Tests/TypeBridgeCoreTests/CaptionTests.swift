@@ -10,6 +10,33 @@ import Testing
 }
 
 struct CaptionConfigurationTests {
+    @Test func oldConfigurationsRemainRealtimeAndQwenUsesOnlyItsModelQuery() throws {
+        let old = Data("{\"id\":\"00000000-0000-0000-0000-000000000001\",\"name\":\"Existing\",\"baseURL\":\"https://old.example.test/v1\",\"model\":\"existing-model\"}".utf8)
+        #expect(try JSONDecoder().decode(SpeechServiceConfiguration.self, from: old).kind == .realtime)
+        let qwen = try SpeechServiceConfiguration(name: "Qwen", baseURL: "https://workspace.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model=qwen3-asr-flash-realtime", model: "qwen3-asr-flash-realtime", kind: .alibabaQwen).validated()
+        #expect(qwen.endpoint.absoluteString == "wss://workspace.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime?model=qwen3-asr-flash-realtime")
+        #expect(try JSONDecoder().decode(SpeechServiceConfiguration.self, from: JSONEncoder().encode(qwen)) == qwen)
+        for query in ["?api_key=private", "?model=wrong", "?intent=transcription", "?model=qwen3-asr-flash-realtime&key=private"] {
+            #expect(throws: CaptionFailure.self) { try SpeechServiceConfiguration(name: "Qwen", baseURL: "wss://speech.example.test/realtime" + query, model: qwen.model, kind: .alibabaQwen).validated() }
+        }
+    }
+    @Test func qwenSessionRequiresMatchingModelPCMAndServerVAD() throws {
+        let data = Data(try RealtimeTranscriptionProtocol.configuration(model: "qwen3-asr-flash-realtime", kind: .alibabaQwen).utf8)
+        let root = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let session = try #require(root["session"] as? [String: Any])
+        #expect(root["event_id"] as? String != nil && session["sample_rate"] as? Int == 16000)
+        #expect(session["audio"] == nil && session["input_audio_format"] as? String == "pcm")
+        let configuration = SpeechServiceConfiguration(name: "Qwen", baseURL: "wss://speech.example.test/realtime", model: "qwen3-asr-flash-realtime", kind: .alibabaQwen)
+        let valid: [String: Any] = ["model": configuration.model, "modalities": ["text"], "input_audio_format": "pcm16", "sample_rate": 16000, "turn_detection": ["type": "server_vad"]]
+        func ready(_ session: [String: Any]) throws -> Bool { RealtimeTranscriptionProtocol.sessionIsReady(try JSONSerialization.data(withJSONObject: ["type": "session.updated", "session": session]), configuration: configuration) }
+        #expect(try ready(valid))
+        for (field, value) in [("model", "wrong" as Any), ("sample_rate", 24000 as Any), ("modalities", ["audio"] as Any), ("input_audio_format", "opus" as Any), ("turn_detection", NSNull() as Any)] {
+            var invalid = valid; invalid[field] = value; #expect(try !ready(invalid))
+        }
+        let preview = Data(#"{"type":"conversation.item.input_audio_transcription.text","item_id":"one","text":"Hello, ","stash":"everyone"}"#.utf8)
+        #expect(try RealtimeTranscriptionProtocol.event(preview, kind: .alibabaQwen) == .snapshot(id: "one", text: "Hello, everyone"))
+        #expect(try RealtimeTranscriptionProtocol.event(preview) == nil)
+    }
     @Test func canonicalizesOnlySecureOrLoopbackEndpointsWithoutURLCredentials() throws {
         let valid = try SpeechServiceConfiguration(name: "Mine", baseURL: "https://speech.example.test/v1/", model: "my-transcriber").validated()
         #expect(valid.endpoint.absoluteString == "wss://speech.example.test/v1/realtime?intent=transcription")
@@ -66,6 +93,12 @@ struct CaptionConfigurationTests {
 }
 
 struct CaptionAudioTests {
+    @Test func sixteenKFramesKeepTheSameTimingAndEnforceTheirOwnLimits() throws {
+        let frame = try CaptionAudioFrame(pcm: Data(repeating: 0, count: 6400), sampleRate: 16000)
+        #expect(abs(frame.duration - 0.2) < 0.001 && frame.sampleRate == 16000 && frame.level == 0)
+        #expect(throws: CaptionFailure.self) { try CaptionAudioFrame(pcm: Data(repeating: 0, count: 16000), sampleRate: 16000) }
+        #expect(throws: CaptionFailure.self) { try CaptionAudioFrame(pcm: Data(repeating: 0, count: 6400), sampleRate: 44100) }
+    }
     private func frame(_ value: Int16 = 4000) throws -> CaptionAudioFrame {
         var samples = [Int16](repeating: value.littleEndian, count: 4800)
         return try CaptionAudioFrame(pcm: samples.withUnsafeMutableBytes { Data($0) })
@@ -109,6 +142,22 @@ struct CaptionAudioTests {
 }
 
 @MainActor struct CaptionPipelineTests {
+    @Test func correctedQwenPreviewsReplaceDraftsAndOnlyFinalTextIsTranslated() async throws {
+        let controller = CaptionTranslationController(), provider = CaptionPendingTranslator()
+        defer { controller.stop(); provider.clean() }
+        start(controller, provider)
+        try controller.receive(.snapshot(id: "one", text: "今天计划"))
+        try controller.receive(.snapshot(id: "one", text: "今天会议讨论项目进度。"))
+        #expect(controller.lines.first?.source == "今天会议讨论项目进度。" && provider.requests.isEmpty)
+        try controller.receive(.completed(id: "one", text: "今天会议讨论项目进度。"))
+        try controller.receive(.snapshot(id: "one", text: "迟到的草稿"))
+        try controller.receive(.finished)
+        #expect(await eventually { provider.requests.count == 1 })
+        #expect(provider.requests.first?.text == "今天会议讨论项目进度。")
+        provider.complete(0, "Today's meeting covers project progress.")
+        #expect(await eventually { controller.lines.first?.translation.isEmpty == false })
+        #expect(controller.lines.count == 1 && controller.lines.first?.source == "今天会议讨论项目进度。")
+    }
     private func eventually(_ condition: () -> Bool) async -> Bool {
         for _ in 0..<200 { if condition() { return true }; try? await Task.sleep(for: .milliseconds(1)) }
         return condition()
@@ -222,6 +271,38 @@ struct CaptionAudioTests {
         let values = try await reader.value
         #expect(values.contains(.delta(id: "one", text: "Hello,")))
         #expect(values.last == .completed(id: "one", text: "Hello, how are you?"))
+    }
+    @Test func qwenStreamsSixteenKWithEventIDsAndDrainsFinalResultsBeforeFinishing() async throws {
+        var value = try configuration("qwen3-asr-flash-realtime", path: "/api-ws/v1/realtime")
+        value.kind = .alibabaQwen; value = try value.validated()
+        let socket = RealtimeTranscriber(); defer { socket.cancel() }
+        try await socket.connect(configuration: value, key: "fixture-only-key")
+        #expect(socket.sampleRate == 16000 && socket.usesServerVAD)
+        let reader = Task { @MainActor in
+            var values: [CaptionTranscriptEvent] = []
+            for try await event in socket.events { values.append(event) }
+            return values
+        }
+        try await socket.send(.append(Data(repeating: 2, count: 6400)))
+        try await socket.send(.append(Data(repeating: 0, count: 6400)))
+        await #expect(throws: CaptionFailure.self) { try await socket.send(.commit) }
+        try await socket.finishInput()
+        let values = try await reader.value
+        #expect(values.contains(.snapshot(id: "qwen-one", text: "Hello,")))
+        #expect(values.contains(.snapshot(id: "qwen-one", text: "Hello, how are you?")))
+        #expect(values.contains(.completed(id: "qwen-one", text: "Hello, how are you?")))
+        #expect(values.last == .finished)
+        await #expect(throws: CaptionFailure.self) { try await socket.send(.append(Data(repeating: 0, count: 6400))) }
+    }
+    @Test func qwenRejectsWrongSessionsAndCanCancelBeforeCaptureStarts() async throws {
+        for model in ["fixture-qwen-wrong", "fixture-qwen-wait"] {
+            var value = try configuration(model, path: "/api-ws/v1/realtime"); value.kind = .alibabaQwen
+            let socket = RealtimeTranscriber(); defer { socket.cancel() }
+            let connecting = Task { try await socket.connect(configuration: value, key: "fixture-only-key") }
+            if model.hasSuffix("wait") { try await Task.sleep(for: .milliseconds(40)); socket.cancel() }
+            do { try await connecting.value; Issue.record("Incompatible/cancelled Qwen session became ready") }
+            catch { #expect(error is CaptionFailure || error is CancellationError) }
+        }
     }
     @Test func cancellationDuringHandshakeNeverStartsAReadySession() async throws {
         let socket = RealtimeTranscriber(), configuration = try configuration("fixture-wait")

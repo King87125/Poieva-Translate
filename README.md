@@ -9,8 +9,8 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.1/Poieva-Translate-0.4.1.dmg"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.1">Release notes</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.2/Poieva-Translate-0.4.2.dmg"><strong>Download for Mac</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.2">Release notes</a>
 </p>
 
 <p align="center">Apple Silicon · macOS 26+ · English / 简体中文</p>
@@ -31,12 +31,12 @@
 
 ## Get started
 
-1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.1/Poieva-Translate-0.4.1.dmg), open it and drag **Poieva Translate** to **Applications**.
+1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.2/Poieva-Translate-0.4.2.dmg), open it and drag **Poieva Translate** to **Applications**.
 2. Open the app and choose **English** or **简体中文**.
 3. Start with the translation window: type or paste some text. The built-in Apple translation service needs no account or API key. Download a language pack in **Settings → System → Language Packs** if needed.
 4. To translate text in other apps, enable **Accessibility** from **Settings → System**. The translation window works without this permission.
 
-> **Developer preview:** v0.4.1 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
+> **Developer preview:** v0.4.2 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
 
 ## Three ways to use it
 
@@ -82,7 +82,7 @@ Export a glossary, a tone, a scene with its linked configuration, or all profile
 
 ## Live captions
 
-Open **Live Captions** from the toolbar or menu bar. Start with **Preview Teleprompter** to see the top-of-screen display without recording or networking. For audio captions, add your own **Realtime transcription-compatible API** in **Model Management → Speech Recognition**, choose an audio source and translator, then start. The current sentence expands from the display edge around the notch, with compact controls on either side when collapsed; text size, original-text visibility and display are adjustable.
+Open **Live Captions** from the toolbar or menu bar. Start with **Preview Teleprompter** to see the top-of-screen display without recording or networking. For audio captions, add **Alibaba Cloud Qwen** or your own **Realtime transcription-compatible API** in **Model Management → Speech Recognition**, choose an audio source and translator, then start. The current sentence expands from the display edge around the notch, with compact controls on either side when collapsed; text size, original-text visibility and display are adjustable.
 
 Audio goes to your selected recognition service only after starting. Speech recognition is separate from Apple’s included text translation. [Read the setup guide](docs/live-captions.md), including current live-testing limits for meeting apps and browsers.
 

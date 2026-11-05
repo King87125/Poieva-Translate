@@ -11,6 +11,7 @@ import socket
 import struct
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit, parse_qs
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -76,7 +77,9 @@ class Handler(BaseHTTPRequestHandler):
             print('ERROR: Client followed a WebSocket redirect', flush=True)
             self.send_error(400)
             return
-        if self.path != '/v1/realtime?intent=transcription':
+        route = urlsplit(self.path)
+        qwen = route.path == '/api-ws/v1/realtime' and set(parse_qs(route.query)) == {'model'}
+        if self.path != '/v1/realtime?intent=transcription' and not qwen:
             self.send_error(404)
             return
         key = self.headers.get('Sec-WebSocket-Key', '')
@@ -88,6 +91,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.connection.settimeout(30)
         try:
+            if qwen:
+                self.handle_qwen(parse_qs(route.query)['model'][0])
+                return
             update = self.receive()
             assert update['type'] == 'session.update'
             session = update['session']
@@ -125,6 +131,53 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             self.close_connection = True
+
+    def handle_qwen(self, model):
+        """Qwen VAD wire fixture; snapshots replace earlier text, never append."""
+        assert self.headers.get('Authorization') in (None, 'Bearer fixture-only-key')
+        self.send({'type': 'session.created', 'session': {'model': model}})
+        update = self.receive()
+        assert update['type'] == 'session.update' and update['event_id']
+        session = update['session']
+        assert session['input_audio_format'] == 'pcm' and session['sample_rate'] == 16000
+        assert session['turn_detection'] == {'type': 'server_vad', 'threshold': 0.0, 'silence_duration_ms': 400}
+        assert 'audio' not in session and 'type' not in session
+        if model == 'fixture-qwen-wait':
+            self.receive()
+            return
+        ready = {'model': model, 'modalities': ['text'], 'input_audio_format': 'pcm16',
+                 'sample_rate': 16000, 'turn_detection': session['turn_detection']}
+        if model == 'fixture-qwen-wrong':
+            ready['sample_rate'] = 24000
+        self.send({'type': 'session.updated', 'session': ready})
+        if model == 'fixture-qwen-wrong':
+            self.receive()
+            return
+        assert model == 'qwen3-asr-flash-realtime'
+        event_ids = {update['event_id']}
+        packets = 0
+        while True:
+            event = self.receive()
+            event_id = event.get('event_id')
+            assert event_id and event_id not in event_ids
+            event_ids.add(event_id)
+            if event['type'] == 'input_audio_buffer.append':
+                data = base64.b64decode(event['audio'], validate=True)
+                assert 0 < len(data) <= 12800 and len(data) % 2 == 0
+                packets += 1
+                if packets == 1:
+                    self.send({'type': 'input_audio_buffer.committed', 'item_id': 'qwen-one', 'previous_item_id': None})
+                    self.send({'type': 'conversation.item.input_audio_transcription.text', 'item_id': 'qwen-one', 'text': '', 'stash': 'Hello,'})
+                elif packets == 2:
+                    self.send({'type': 'conversation.item.input_audio_transcription.text', 'item_id': 'qwen-one', 'text': 'Hello, ', 'stash': 'how are you?'})
+            elif event['type'] == 'session.finish':
+                if packets:
+                    self.send({'type': 'conversation.item.input_audio_transcription.completed', 'item_id': 'qwen-one', 'transcript': 'Hello, how are you?'})
+                self.send({'type': 'session.finished'})
+                print('Public Qwen PCM16/16k turn flushed by fixed protocol fixture.', flush=True)
+                return
+            else:
+                raise AssertionError('Unexpected client event in server VAD mode')
 
 
 if __name__ == '__main__':

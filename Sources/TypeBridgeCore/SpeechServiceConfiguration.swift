@@ -17,19 +17,36 @@ public enum CaptionFailure: LocalizedError {
         case .rateLimit: return L10n.tr("识别服务额度不足或请求过于频繁，请稍后重试。")
         case .response: return L10n.tr("识别服务返回了无效结果，字幕已暂停。")
         case .unavailable: return L10n.tr("识别服务暂时不可用，请稍后重试。")
-        case .noService: return L10n.tr("请先添加支持 Realtime 转写的语音识别 API。")
+        case .noService: return L10n.tr("请先添加语音识别 API。")
         }
     }
 }
 
-/// A transcription-only Realtime endpoint. Never reused as a text translator.
+public enum SpeechServiceKind: String, Codable, CaseIterable, Sendable {
+    case realtime, alibabaQwen
+    public var name: String { self == .alibabaQwen ? L10n.tr("阿里云千问") : L10n.tr("Realtime 转写（兼容）") }
+    public var sampleRate: Int { self == .alibabaQwen ? 16_000 : 24_000 }
+    public var usesServerVAD: Bool { self == .alibabaQwen }
+    public var defaultBaseURL: String { self == .alibabaQwen ? "wss://dashscope.aliyuncs.com/api-ws/v1/realtime" : "" }
+    public var defaultModel: String { self == .alibabaQwen ? "qwen3-asr-flash-realtime" : "" }
+}
+
+/// A speech-only endpoint. Never reused as a text translator.
 public struct SpeechServiceConfiguration: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var name: String
     public var baseURL: String
     public var model: String
-    public init(id: UUID = UUID(), name: String = "", baseURL: String = "", model: String = "") {
-        self.id = id; self.name = name; self.baseURL = baseURL; self.model = model
+    public var kind: SpeechServiceKind
+    public init(id: UUID = UUID(), name: String = "", baseURL: String = "", model: String = "", kind: SpeechServiceKind = .realtime) {
+        self.id = id; self.name = name; self.baseURL = baseURL; self.model = model; self.kind = kind
+    }
+    private enum CodingKeys: CodingKey { case id, name, baseURL, model, kind }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id); name = try values.decode(String.self, forKey: .name)
+        baseURL = try values.decode(String.self, forKey: .baseURL); model = try values.decode(String.self, forKey: .model)
+        kind = try values.decodeIfPresent(SpeechServiceKind.self, forKey: .kind) ?? .realtime
     }
     public func validated() throws -> Self {
         var result = self
@@ -39,14 +56,15 @@ public struct SpeechServiceConfiguration: Codable, Equatable, Identifiable, Send
               !result.name.contains(where: \.isNewline), !result.model.contains(where: { $0.isWhitespace || $0.isASCII && ($0.asciiValue ?? 32) < 32 }) else { throw CaptionFailure.configuration }
         let raw = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard raw.count <= 2048, var url = URLComponents(string: raw), let host = url.host, !host.isEmpty,
-              url.user == nil, url.password == nil, url.fragment == nil,
-              url.queryItems == nil || url.queryItems == [URLQueryItem(name: "intent", value: "transcription")] else { throw CaptionFailure.configuration }
+              url.user == nil, url.password == nil, url.fragment == nil else { throw CaptionFailure.configuration }
+        let expectedQuery = kind == .alibabaQwen ? URLQueryItem(name: "model", value: result.model) : URLQueryItem(name: "intent", value: "transcription")
+        guard url.queryItems == nil || url.queryItems == [expectedQuery] else { throw CaptionFailure.configuration }
         let scheme = url.scheme?.lowercased(), local = ["localhost", "127.0.0.1", "::1", "[::1]"].contains(host.lowercased())
         guard scheme == "https" || scheme == "wss" || local && (scheme == "http" || scheme == "ws") else { throw CaptionFailure.configuration }
         url.scheme = scheme == "https" || scheme == "wss" ? "wss" : "ws"
         url.host = host.lowercased(); url.query = nil
         url.path = url.path.replacingOccurrences(of: #"/+$"#, with: "", options: .regularExpression)
-        if url.path.isEmpty { url.path = "/v1/realtime" }
+        if url.path.isEmpty { url.path = kind == .alibabaQwen ? "/api-ws/v1/realtime" : "/v1/realtime" }
         else if url.path.hasSuffix("/v1") { url.path += "/realtime" }
         guard let canonical = url.url?.absoluteString else { throw CaptionFailure.configuration }
         result.baseURL = canonical
@@ -54,7 +72,7 @@ public struct SpeechServiceConfiguration: Codable, Equatable, Identifiable, Send
     }
     public var endpoint: URL {
         var url = URLComponents(string: baseURL)!
-        url.queryItems = [URLQueryItem(name: "intent", value: "transcription")]
+        url.queryItems = [kind == .alibabaQwen ? URLQueryItem(name: "model", value: model) : URLQueryItem(name: "intent", value: "transcription")]
         return url.url!
     }
     public var origin: String {
@@ -102,7 +120,7 @@ public final class SpeechServiceStore: ObservableObject {
         return clear ? nil : (!key.isEmpty ? key : try self.key(for: value.id))
     }
     private func validateReuse(_ value: SpeechServiceConfiguration, key: String, clear: Bool) throws {
-        if let old = configurations.first(where: { $0.id == value.id }), old.origin != value.origin,
+        if let old = configurations.first(where: { $0.id == value.id }), old.origin != value.origin || old.kind != value.kind,
            hasKey(value.id), key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !clear {
             throw ServiceConfigurationFailure.invalid(L10n.tr("服务地址已更改，请重新填写密钥，或清除已保存的密钥。"))
         }

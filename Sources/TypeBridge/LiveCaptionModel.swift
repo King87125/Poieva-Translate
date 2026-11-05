@@ -62,6 +62,8 @@ final class LiveCaptionModel: ObservableObject {
     private var sourceBundleID = ""
     private var sampleEnded = false
     private var sampleCommits = 0
+    private var sampleRequiresFinish = false
+    private var sampleRecognitionFinished = false
     private var sampleCompletions: Set<String> = []
     private var notificationTokens: [NSObjectProtocol] = []
     var isActive: Bool { phase == .connecting || phase == .listening }
@@ -105,31 +107,32 @@ final class LiveCaptionModel: ObservableObject {
         let translator = recipe(settings.translationID, settings.source, settings.target)
         sourceBundleID = file == nil ? bundleID : ""
         sampleURL = file; scopedSample = file?.startAccessingSecurityScopedResource() ?? false
-        sampleEnded = false; sampleCommits = 0; sampleCompletions = []
+        sampleEnded = false; sampleCommits = 0; sampleCompletions = []; sampleRecognitionFinished = false; sampleRequiresFinish = false
         startTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 if file == nil, !bundleID.isEmpty,
                    !NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == bundleID }) { throw CaptionFailure.sourceGone }
                 guard let configuration = self.speechServices.configurations.first(where: { $0.id == chosenID }) else { throw CaptionFailure.noService }
+                self.sampleRequiresFinish = configuration.kind.usesServerVAD
                 let key = try self.speechServices.key(for: configuration.id)
                 self.transcript.start(provider: translator.provider, request: translator.request)
                 let system = try await self.connect(configuration, key: key, channel: "system", revision: id)
                 let mic = microphone ? try await self.connect(configuration, key: key, channel: "mic", revision: id) : nil
                 try Task.checkCancellation(); guard self.revision == id else { return }
                 if let file {
-                    self.consume(try CaptionAudioCapture.replay(file), socket: system, revision: id)
+                    self.consume(try CaptionAudioCapture.replay(file, sampleRate: system.sampleRate), socket: system, revision: id)
                 } else {
                     // Each input has its own clock and recognition session; no
                     // mixing/double counting of the microphone and meeting audio.
                     let capture = CaptionAudioCapture(); self.captures.append(capture)
                     if let mic {
                         let microphoneCapture = CaptionAudioCapture(); self.captures.append(microphoneCapture)
-                        let frames = try await microphoneCapture.startMicrophone()
+                        let frames = try await microphoneCapture.startMicrophone(sampleRate: mic.sampleRate)
                         try Task.checkCancellation(); guard self.revision == id else { return }
                         self.consume(frames, socket: mic, revision: id)
                     }
-                    self.consume(try capture.startSystem(bundleID: bundleID.isEmpty ? nil : bundleID), socket: system, revision: id)
+                    self.consume(try capture.startSystem(bundleID: bundleID.isEmpty ? nil : bundleID, sampleRate: system.sampleRate), socket: system, revision: id)
                 }
                 self.phase = .listening; self.startTask = nil
             } catch {
@@ -146,15 +149,21 @@ final class LiveCaptionModel: ObservableObject {
             do {
                 for try await event in socket.events {
                     guard let self, self.revision == id, !Task.isCancelled else { return }
+                    if event == .finished {
+                        guard self.sampleURL != nil, self.sampleRequiresFinish else { throw CaptionFailure.connection }
+                        self.sampleRecognitionFinished = true; self.finishSampleIfReady(); continue
+                    }
                     let prefix = channel + ":"
                     let value: CaptionTranscriptEvent
                     switch event {
                     case .committed(let item, let previous): value = .committed(id: prefix + item, previous: previous.map { prefix + $0 })
                     case .delta(let item, let text): value = .delta(id: prefix + item, text: text)
+                    case .snapshot(let item, let text): value = .snapshot(id: prefix + item, text: text)
                     case .completed(let item, let text): value = .completed(id: prefix + item, text: text)
+                    case .finished: continue
                     }
                     try self.transcript.receive(value, channel: channel == "mic" ? L10n.tr("我") : L10n.tr("原声"))
-                    if self.sampleURL != nil, case .completed(let item, _) = value, self.sampleCompletions.insert(item).inserted {
+                    if self.sampleURL != nil, !self.sampleRequiresFinish, case .completed(let item, _) = value, self.sampleCompletions.insert(item).inserted {
                         self.sampleCommits = max(0, self.sampleCommits - 1); self.finishSampleIfReady()
                     }
                 }
@@ -168,13 +177,18 @@ final class LiveCaptionModel: ObservableObject {
             do {
                 for try await frame in stream {
                     guard let self, self.revision == id, !Task.isCancelled else { return }
-                    for action in gate.consume(frame) {
+                    guard frame.sampleRate == socket.sampleRate else { throw CaptionFailure.audioFormat }
+                    // Qwen's server VAD needs the silence as well as speech;
+                    // sending local manual commits would end its turns twice.
+                    for action in socket.usesServerVAD ? [.append(frame.pcm)] : gate.consume(frame) {
                         if self.sampleURL != nil, action == .commit { self.sampleCommits += 1 }
                         try await socket.send(action)
                     }
                 }
                 if let self, self.revision == id, self.sampleURL != nil {
-                    self.sampleEnded = true; self.finishSampleIfReady()
+                    self.sampleEnded = true
+                    if socket.usesServerVAD { try await socket.finishInput() }
+                    self.finishSampleIfReady()
                     if self.sampleURL != nil {
                         self.tasks.append(Task { @MainActor [weak self] in
                             do {
@@ -188,7 +202,7 @@ final class LiveCaptionModel: ObservableObject {
         })
     }
     private func finishSampleIfReady() {
-        guard sampleURL != nil, sampleEnded, sampleCommits == 0,
+        guard sampleURL != nil, sampleEnded, (sampleRequiresFinish ? sampleRecognitionFinished : sampleCommits == 0),
               transcript.lines.allSatisfy({ $0.isFinal && ($0.source.isEmpty || !$0.translation.isEmpty) }) else { return }
         pause()
     }

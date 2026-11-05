@@ -639,3 +639,16 @@
 "预览提词器" = "Preview Teleprompter";
 "预览提词器（不联网）" = "Preview Teleprompter (Offline)";
 "麦克风未授权，请在系统设置中允许后重新开始。" = "Microphone access is not allowed. Enable it in System Settings, then start again.";
+
+"请先添加语音识别 API。" = "Add a speech recognition API first.";
+"阿里云千问" = "Alibaba Cloud Qwen";
+"Realtime 转写（兼容）" = "Realtime transcription (compatible)";
+"支持阿里云千问和 Realtime 转写兼容接口。密钥保存在本机钥匙串。" = "Supports Alibaba Cloud Qwen and Realtime-compatible transcription APIs. Keys are stored in the local Keychain.";
+"语音识别服务类型" = "Speech recognition service type";
+"服务地域" = "Service region";
+"识别服务地域" = "Speech service region";
+"北京" = "Beijing";
+"新加坡" = "Singapore";
+"自定义地址" = "Custom endpoint";
+"填写所选地域的百炼 API Key。北京与新加坡的密钥不能混用，也可填写业务空间专属地址。" = "Enter a Model Studio API key for the selected region. Beijing and Singapore keys are not interchangeable. Workspace-specific endpoints are also supported.";
+"阿里云接入说明" = "Alibaba Cloud setup guide";

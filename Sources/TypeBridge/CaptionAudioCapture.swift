@@ -4,34 +4,56 @@ import CoreAudio
 import TypeBridgeCore
 
 /// Runs conversion on the audio callback queue. The output is always mono
-/// little-endian PCM16 / 24 kHz, delivered in 200 ms packets with bounded buffering.
+/// little-endian PCM16 at the provider's sample rate, in bounded 200 ms packets.
 private final class CaptionPCMConverter: @unchecked Sendable {
     private let converter: AVAudioConverter
     private let output: AVAudioFormat
+    private let sampleRate: Int
+    private var packetBytes: Int { sampleRate * 2 / 5 }
     private var pending = Data()
     private let continuation: AsyncThrowingStream<CaptionAudioFrame, Error>.Continuation
-    init(input: AVAudioFormat, continuation: AsyncThrowingStream<CaptionAudioFrame, Error>.Continuation) throws {
-        guard input.sampleRate > 0, input.channelCount > 0,
-              let output = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24_000, channels: 1, interleaved: true),
+    init(input: AVAudioFormat, sampleRate: Int, continuation: AsyncThrowingStream<CaptionAudioFrame, Error>.Continuation) throws {
+        guard [16_000, 24_000].contains(sampleRate), input.sampleRate > 0, input.channelCount > 0,
+              let output = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: Double(sampleRate), channels: 1, interleaved: true),
               let converter = AVAudioConverter(from: input, to: output) else { throw CaptionFailure.audioFormat }
-        self.converter = converter; self.output = output; self.continuation = continuation
+        self.converter = converter; self.output = output; self.continuation = continuation; self.sampleRate = sampleRate
     }
     func consume(_ input: AVAudioPCMBuffer) {
-        let capacity = AVAudioFrameCount(ceil(Double(input.frameLength) * 24_000 / input.format.sampleRate) + 64)
-        guard capacity <= 48_000, let buffer = AVAudioPCMBuffer(pcmFormat: output, frameCapacity: capacity) else { continuation.finish(throwing: CaptionFailure.audioFormat); return }
+        let capacity = AVAudioFrameCount(ceil(Double(input.frameLength) * Double(sampleRate) / input.format.sampleRate) + 64)
+        guard capacity <= AVAudioFrameCount(sampleRate * 2), let buffer = AVAudioPCMBuffer(pcmFormat: output, frameCapacity: capacity) else { continuation.finish(throwing: CaptionFailure.audioFormat); return }
         var supplied = false, error: NSError?
         let status = converter.convert(to: buffer, error: &error) { _, status in
             if supplied { status.pointee = .noDataNow; return nil }
             supplied = true; status.pointee = .haveData; return input
         }
         guard status != .error, error == nil else { continuation.finish(throwing: CaptionFailure.audioFormat); return }
+        append(buffer)
+    }
+    func finish() throws {
+        // Drain resampler latency and preserve the final short packet. Dropping
+        // it can cut off a word at the end of an explicitly selected test file.
+        for _ in 0..<8 {
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: output, frameCapacity: AVAudioFrameCount(sampleRate / 5)) else { throw CaptionFailure.audioFormat }
+            var error: NSError?
+            let status = converter.convert(to: buffer, error: &error) { _, state in state.pointee = .endOfStream; return nil }
+            guard status != .error, error == nil else { throw CaptionFailure.audioFormat }
+            append(buffer)
+            if status == .endOfStream || buffer.frameLength == 0 { break }
+        }
+        if !pending.isEmpty {
+            pending.append(Data(repeating: 0, count: packetBytes - pending.count))
+            if case .dropped = continuation.yield(try CaptionAudioFrame(pcm: pending, sampleRate: sampleRate)) { throw CaptionFailure.backlog }
+            pending = Data()
+        }
+    }
+    private func append(_ buffer: AVAudioPCMBuffer) {
         let bytes = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
         guard let first = bytes.first, let data = first.mData else { return }
         pending.append(data.assumingMemoryBound(to: UInt8.self), count: Int(first.mDataByteSize))
-        while pending.count >= 9_600 {
-            let packet = pending.prefix(9_600); pending.removeFirst(9_600)
+        while pending.count >= packetBytes {
+            let packet = pending.prefix(packetBytes); pending.removeFirst(packetBytes)
             do {
-                if case .dropped = continuation.yield(try CaptionAudioFrame(pcm: Data(packet))) { continuation.finish(throwing: CaptionFailure.backlog); return }
+                if case .dropped = continuation.yield(try CaptionAudioFrame(pcm: Data(packet), sampleRate: sampleRate)) { continuation.finish(throwing: CaptionFailure.backlog); return }
             } catch { continuation.finish(throwing: error); return }
         }
     }
@@ -46,7 +68,7 @@ final class CaptionAudioCapture {
     private var engine: AVAudioEngine?
     private var continuation: AsyncThrowingStream<CaptionAudioFrame, Error>.Continuation?
     private let queue = DispatchQueue(label: "studio.typebridge.caption-audio", qos: .userInitiated)
-    func startSystem(bundleID: String?) throws -> AsyncThrowingStream<CaptionAudioFrame, Error> {
+    func startSystem(bundleID: String?, sampleRate: Int) throws -> AsyncThrowingStream<CaptionAudioFrame, Error> {
         stop()
         if let bundleID, !NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == bundleID }) { throw CaptionFailure.sourceGone }
         var output: AsyncThrowingStream<CaptionAudioFrame, Error>.Continuation!
@@ -64,7 +86,7 @@ final class CaptionAudioCapture {
             var address = AudioObjectPropertyAddress(mSelector: kAudioTapPropertyFormat, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
             guard AudioObjectGetPropertyData(tap, &address, 0, nil, &size, &format) == noErr,
                   let inputFormat = AVAudioFormat(streamDescription: &format) else { throw CaptionFailure.audioFormat }
-            let converter = try CaptionPCMConverter(input: inputFormat, continuation: output)
+            let converter = try CaptionPCMConverter(input: inputFormat, sampleRate: sampleRate, continuation: output)
             let properties: [String: Any] = [
                 kAudioAggregateDeviceNameKey: "Poieva Live Captions", kAudioAggregateDeviceUIDKey: UUID().uuidString,
                 kAudioAggregateDeviceIsPrivateKey: true, kAudioAggregateDeviceTapAutoStartKey: true,
@@ -88,7 +110,7 @@ final class CaptionAudioCapture {
             return stream
         } catch { stop(); throw error }
     }
-    func startMicrophone() async throws -> AsyncThrowingStream<CaptionAudioFrame, Error> {
+    func startMicrophone(sampleRate: Int) async throws -> AsyncThrowingStream<CaptionAudioFrame, Error> {
         stop()
         let allowed: Bool
         switch AVCaptureDevice.authorizationStatus(for: .audio) {
@@ -102,7 +124,7 @@ final class CaptionAudioCapture {
         let stream = AsyncThrowingStream<CaptionAudioFrame, Error>(bufferingPolicy: .bufferingOldest(20)) { output = $0 }
         continuation = output
         let engine = AVAudioEngine(), format = engine.inputNode.outputFormat(forBus: 0)
-        let converter = try CaptionPCMConverter(input: format, continuation: output)
+        let converter = try CaptionPCMConverter(input: format, sampleRate: sampleRate, continuation: output)
         engine.inputNode.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, _ in converter.consume(buffer) }
         self.engine = engine
         do { engine.prepare(); try engine.start(); return stream }
@@ -122,13 +144,13 @@ final class CaptionAudioCapture {
     }
     /// Explicit file replay is useful for checking an API without recording the
     /// desktop or microphone. It uses the same resampling and transport pipeline.
-    static func replay(_ url: URL) throws -> AsyncThrowingStream<CaptionAudioFrame, Error> {
+    static func replay(_ url: URL, sampleRate: Int) throws -> AsyncThrowingStream<CaptionAudioFrame, Error> {
         let file = try AVAudioFile(forReading: url)
         guard file.length > 0, Double(file.length) / file.processingFormat.sampleRate <= 60 else { throw CaptionFailure.audioFormat }
         return AsyncThrowingStream(bufferingPolicy: .bufferingOldest(20)) { continuation in
             let task = Task.detached {
                 do {
-                    let converter = try CaptionPCMConverter(input: file.processingFormat, continuation: continuation)
+                    let converter = try CaptionPCMConverter(input: file.processingFormat, sampleRate: sampleRate, continuation: continuation)
                     while file.framePosition < file.length, !Task.isCancelled {
                         let frames = AVAudioFrameCount(min(4096, file.length - file.framePosition))
                         guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: frames) else { throw CaptionFailure.audioFormat }
@@ -136,9 +158,10 @@ final class CaptionAudioCapture {
                         try await Task.sleep(for: .seconds(Double(buffer.frameLength) / file.processingFormat.sampleRate))
                     }
                     try Task.checkCancellation()
+                    try converter.finish()
                     // Flush the gate with enough silence to commit a final phrase.
                     for _ in 0..<4 {
-                        continuation.yield(try CaptionAudioFrame(pcm: Data(repeating: 0, count: 9600)))
+                        continuation.yield(try CaptionAudioFrame(pcm: Data(repeating: 0, count: sampleRate * 2 / 5), sampleRate: sampleRate))
                         try await Task.sleep(for: .milliseconds(200))
                     }
                     continuation.finish()

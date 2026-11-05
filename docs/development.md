@@ -25,7 +25,7 @@ Create a drag-to-install disk image from the signed app:
 ./scripts/package-dmg.sh
 ```
 
-The output is `dist/Poieva-Translate-0.4.0.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
+The output is `dist/Poieva-Translate-0.4.2.dmg`. The DMG uses a fixed Finder layout with a large app icon on the left and Applications on the right. Its metadata tools are installed only in `.build/dmg-tools`, with pinned versions and verified hashes; they are not application runtime dependencies. Local development signing is separate from Developer ID signing and notarization needed for normal public distribution. See [distribution and licensing](distribution.md) for the current status and prerequisites.
 
 ## Checks
 
@@ -90,7 +90,7 @@ The current app stores explicit writing preferences and terminology. It does not
 
 ## Live caption development
 
-`CaptionAudioCapture.swift` uses Core Audio process taps and optional AVAudioEngine microphone input. Each input is converted to 24 kHz mono PCM16 and handled separately. `RealtimeTranscription.swift` implements transcription-only WebSocket sessions; `CaptionTranslationController.swift` correlates items, bounds the queue and reuses `TranslationProvider`. The borderless nonactivating island and settings are in `CaptionIsland.swift` and `LiveCaptionViews.swift`.
+`CaptionAudioCapture.swift` uses Core Audio process taps and optional AVAudioEngine microphone input. Inputs are handled separately and converted to the selected provider's mono PCM16 rate: 16 kHz for Alibaba Qwen server VAD, 24 kHz for Realtime-compatible client-side turns. `RealtimeTranscription.swift` handles both speech-only WebSocket protocols, Qwen replacement previews and file-end draining; `CaptionTranslationController.swift` correlates items, bounds the queue and reuses `TranslationProvider`. The borderless nonactivating island and settings are in `CaptionIsland.swift` and `LiveCaptionViews.swift`.
 
 For loopback WebSocket tests, start `python3 scripts/mock-caption-service.py`, then run `POIEVA_TEST_SPEECH_URL=ws://127.0.0.1:19084/v1/realtime ./scripts/test.sh --filter Caption`. This server validates wire behavior and returns a fixed public transcript; it is not a speech model. Use only public synthetic audio with it. The UI also supports explicit audio-file replay to test conversion, networking, translation and display without recording the desktop or microphone. [Configuration and limits](live-captions.md).
 

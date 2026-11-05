@@ -32,8 +32,9 @@ public final class CaptionTranslationController: ObservableObject {
     }
     public func receive(_ event: CaptionTranscriptEvent, channel: String = "") throws {
         guard provider != nil else { return }
+        if event == .finished { return }
         let id: String
-        switch event { case .committed(let value, _), .delta(let value, _), .completed(let value, _): id = value }
+        switch event { case .committed(let value, _), .delta(let value, _), .snapshot(let value, _), .completed(let value, _): id = value; case .finished: return }
         if case .committed = event {} else if completedIDs.contains(id) { return }
         if !lines.contains(where: { $0.id == id }) {
             guard lines.count < 24 || lines.first?.translation.isEmpty == false else { throw CaptionFailure.backlog }
@@ -53,6 +54,9 @@ public final class CaptionTranslationController: ObservableObject {
         case .delta(_, let text):
             guard !lines[index].isFinal, lines[index].source.count + text.count <= 4_000 else { throw CaptionFailure.response }
             lines[index].source += text
+        case .snapshot(_, let text):
+            guard !lines[index].isFinal, text.count <= 4_000 else { throw CaptionFailure.response }
+            lines[index].source = text
         case .completed(_, let text):
             guard !lines[index].isFinal else { return }
             let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -60,6 +64,7 @@ public final class CaptionTranslationController: ObservableObject {
             lines[index].source = text; lines[index].isFinal = true
             completedIDs.append(id); if completedIDs.count > 128 { completedIDs.removeFirst() }
             if !text.isEmpty { pending.append(id); process() }
+        case .finished: break
         }
     }
     private func process() {

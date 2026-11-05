@@ -1,13 +1,13 @@
 import Foundation
 
 public struct CaptionAudioFrame: Sendable, Equatable {
-    public static let sampleRate = 24_000
+    public let sampleRate: Int
     public let pcm: Data
-    public init(pcm: Data) throws {
-        guard !pcm.isEmpty, pcm.count <= 19_200, pcm.count.isMultiple(of: 2) else { throw CaptionFailure.audioFormat }
-        self.pcm = pcm
+    public init(pcm: Data, sampleRate: Int = 24_000) throws {
+        guard [16_000, 24_000].contains(sampleRate), !pcm.isEmpty, pcm.count <= sampleRate * 4 / 5, pcm.count.isMultiple(of: 2) else { throw CaptionFailure.audioFormat }
+        self.pcm = pcm; self.sampleRate = sampleRate
     }
-    public var duration: Double { Double(pcm.count) / 48_000 }
+    public var duration: Double { Double(pcm.count) / Double(sampleRate * 2) }
     public var level: Double {
         let sum: Double = pcm.withUnsafeBytes { bytes in
             var sum = 0.0

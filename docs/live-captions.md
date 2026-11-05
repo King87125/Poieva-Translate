@@ -4,7 +4,7 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 
 ## 开始使用
 
-1. 打开 **实时字幕 → 语音识别 → 配置…**。在模型管理的「语音识别」页添加自己的服务名称、实时转写地址、转写模型 ID 和密钥。语音识别配置与「翻译与辅助」配置分开；原有翻译服务和密钥不变。
+1. 打开 **实时字幕 → 语音识别 → 配置…**。在模型管理的「语音识别」页添加配置，选择 **阿里云千问** 或 **Realtime 转写（兼容）**。阿里云默认填好模型与北京地域地址，只需填写对应地域的百炼 API Key；也可选择新加坡或填写业务空间专属地址。语音识别配置与「翻译与辅助」配置分开。
 2. 点「检查连接」可验证转写会话是否就绪，不会采集声音。保存后回到字幕窗口，选择该识别服务。
 3. 选择 **全部系统声音** 或一个正在运行的应用。浏览器按整个应用采音，首版不区分标签页。可以选择包含自己的麦克风，此时增加一路独立识别连接。
 4. 选择苹果或已配置的翻译服务，以及原文/目标语言。原文语言用于翻译方向；识别接口自行识别输入语音。字幕使用当前翻译场景的术语与语气；全局上下文开启时，仅传入之前的字幕作为参考。
@@ -33,7 +33,20 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 
 ## API 要求
 
-首版适配 **Realtime transcription 兼容 WebSocket 接口**。它是专门的语音转写接口；文字 Chat Completions 地址、普通 HTTP 翻译接口或任意一个聊天模型不会自动获得语音识别能力。服务商需要兼容下列协议，不能仅凭「支持音频」就认定可用。
+目前支持两类专门的语音转写接口。文字 Chat Completions 地址、普通 HTTP 翻译接口或任意一个聊天模型不会自动获得语音识别能力。
+
+### 阿里云千问
+
+- 服务类型选 **阿里云千问**，默认模型 `qwen3-asr-flash-realtime`。北京默认地址为 `wss://dashscope.aliyuncs.com/api-ws/v1/realtime`，新加坡为 `wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime`。这两个旧域名仍获官方支持；也可填写官方推荐的 `wss://业务空间ID.cn-beijing.maas.aliyuncs.com/api-ws/v1/realtime` 或对应新加坡专属地址。密钥必须与地域对应。
+- 应用自动添加 `?model=模型ID`，使用 Bearer 鉴权；输入为 16 kHz、单声道、小端 PCM16，按 200 ms 音频包持续发送，包含静音。
+- 使用服务端 VAD 分句，停顿阈值 400 ms，不发送客户端手动 commit。每条客户端事件具有独立 `event_id`。先验证服务确认的模型、格式和分句模式，之后才采音。
+- 阿里云的 `text + stash` 是当前句的完整草稿，用新内容替换旧草稿，避免累加重复。最终 `completed` 结果才触发翻译。音频文件发送完后通过 `session.finish` 收尾，等待 `session.finished` 与最后一句翻译完成，再自动暂停；用户手动暂停/停止仍立即取消。
+
+官方依据：[WebSocket 接入与地域地址](https://help.aliyun.com/zh/model-studio/qwen-asr-realtime-interaction-process)、[客户端事件](https://help.aliyun.com/zh/model-studio/qwen-asr-realtime-client-events)、[服务端事件](https://help.aliyun.com/zh/model-studio/qwen-asr-realtime-server-events)。
+
+### Realtime 转写（兼容）
+
+这一类型保留原有 Realtime transcription 协议，不会改变已保存的旧配置：
 
 - 地址可填写完整的 `wss://api.example.com/v1/realtime`，也可填 `https://api.example.com/v1`，应用会转换并添加 `/realtime?intent=transcription`。非标准路径按填写的路径使用。远程要求 WSS；明文 WS 只允许 localhost/回环地址用于开发。
 - 密钥通过 `Authorization: Bearer …` 请求头传递，不支持把密钥写入 URL。更换服务来源时需要重新填写或清除旧密钥。密钥保存在既有的固定钥匙串组件中，不写入配置偏好。
@@ -41,7 +54,16 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 - 收到匹配转写模型的会话确认后才开始采音。客户端用轻量能量门限识别停顿，在约 600 ms 静音或最长约 8 秒时提交一段；这不是本地 AI 模型。
 - 服务需支持 `input_audio_buffer.append`、`input_audio_buffer.commit` 和对应的增量/完成事件。客户端按 `item_id` 匹配原文和译文，处理乱序及重复结果。
 
-协议依据：[OpenAI Realtime transcription](https://developers.openai.com/api/docs/guides/realtime-transcription)。例如官方文档中的转写模型也需要对应账户权限；此处不提供品牌预设，也不保证其他服务声称兼容就能使用。
+协议依据：[OpenAI Realtime transcription](https://developers.openai.com/api/docs/guides/realtime-transcription)。例如官方文档中的转写模型也需要对应账户权限；其他服务声称兼容时，仍需检查具体协议。
+
+## 腾讯会议自测
+
+1. 在模型管理中为阿里云配置点 **检查连接**，成功后保存。该按钮只验证会话，不采音，也不证明语音识别质量。
+2. 在腾讯会议创建自己的测试会议，用手机作为第二个参会端加入。电脑端麦克风静音，手机端读公开例句；让电脑端能听到来自手机的会议声音。
+3. Poieva 的声音来源选 **腾讯会议**，翻译服务选 **苹果系统翻译**，目标语言设为 **简体中文**。先关闭「同时识别我的麦克风」，单独验证会议传来的声音。
+4. 点 **开始字幕**，首次录音权限由你在 macOS 中确认。手机端读：`Today's meeting is about the project timeline. We plan to finish the first version next Friday.` 检查顶部是否先出现英文，再出现对应中文。
+5. 单人会议没有远端声音。只有一台设备时，可勾选 **同时识别我的麦克风** 做本人语音测试，但这验证的是独立麦克风路径，不能据此认定腾讯会议的对方声音已通过。
+6. 测试后点 **暂停** 或 **停止** 关闭采音与 API 连接。若有问题，反馈界面错误和声音来源即可。
 
 ## 隐私和运行方式
 
@@ -59,11 +81,13 @@ Poieva 不将音频或字幕写入历史、日志或配置文件。内存中只�
 
 *v0.4.0 链路验收截图，当前顶部样式见上方预览图。识别原文由本机固定协议样例返回，中文来自实际苹果翻译。文件测试完成后自动暂停并关闭连接。*
 
-本机样例不是语音识别模型，不能证明识别准确率或云端延迟。按用户安排，真实语音 API 稍后配置；腾讯会议、飞书、浏览器的实际声音采集、音频设备切换、长时间运行、全屏与多屏组合仍需在用户授权的公开测试中逐项验收。受保护视频的声音可能无法采集，首版不承诺所有视频或会议应用兼容。
+本机样例不是语音识别模型，不能证明识别准确率或云端延迟。用户自行配置阿里云后实际反馈可用、速度可接受；具体声源和量化延迟尚未确认。腾讯会议远端音频、单独麦克风、飞书、浏览器、音频设备切换、长时间运行、全屏与多屏组合仍需分别记录验收。受保护视频的声音可能无法采集，首版不承诺所有视频或会议应用兼容。
 
 ## English
 
-Open **Live Captions** from the translation window’s toolbar or the app/menu-bar menu. Add your own speech recognition endpoint under **Model Management → Speech Recognition**, then select an audio source, your translator and target language. Speech configurations are separate from existing text translation and assistant configurations. The first release requires a **Realtime transcription-compatible WebSocket API**, with transcription sessions, 24 kHz mono PCM16 input and manual turn commits. A text-only model or ordinary translation endpoint is not sufficient.
+Open **Live Captions** from the translation window’s toolbar or the app/menu-bar menu. Under **Model Management → Speech Recognition**, choose **Alibaba Cloud Qwen** or **Realtime transcription (compatible)**, then select an audio source, your translator and target language. Speech configurations are separate from existing text translation and assistant configurations. A text-only model or ordinary translation endpoint is not sufficient.
+
+For Qwen, the model and Beijing endpoint are filled in by default; enter your region's Model Studio API key, or select Singapore/use a workspace-specific endpoint. Qwen receives 16 kHz mono PCM16 with server VAD. Its corrected full-sentence previews replace earlier drafts. File tests send `session.finish` and wait for `session.finished` and the final translation before pausing. The original Realtime-compatible type keeps 24 kHz PCM16 and client-side turn commits; old configurations retain that type.
 
 Start captions to request system audio recording permission; optionally include your microphone as a separate recognition connection. A continuous dark surface expands from the display edge around the notch, with compact controls on either side when collapsed. On displays without a notch, it appears below the menu bar. It shows the current source/translated sentence, supports collapse, pause, text size and display selection, and does not take keyboard focus. Translation reuses Apple or your existing configured service and the active scene. Browser audio is captured per application, not per tab.
 
@@ -73,4 +97,4 @@ The top display uses public AppKit window and screen-geometry APIs; it is not th
 
 The client has bounded buffers and translation queues, correlates results by item ID, and rejects late results after cancellation. Errors pause the session without automatic retries or reconnects. Recognition does not run a local AI model. The audio tap does not replace default audio devices or install a virtual driver.
 
-Validation used public synthetic audio, a fixed loopback WebSocket response and real Apple translation. This checks the application pipeline, not speech recognition quality. Real speech APIs, Tencent Meeting/Lark/browser capture, long sessions and device/display combinations remain subject to user configuration, permission and live testing. See [verification notes](verification.md).
+Validation used public synthetic audio, fixed loopback WebSocket responses and real Apple translation. This checks the application pipeline, not speech recognition quality. After configuring Alibaba Qwen independently, the user reported that it worked with acceptable perceived speed; the exact audio source and measured latency were not confirmed. To test Tencent Meeting's remote audio, join your own meeting from a second device, mute the computer microphone, select Tencent Meeting as the source and read the public English sample above from the other device. A single-person microphone test covers a separate input path. Long sessions and device/display combinations still need live testing. See [verification notes](verification.md).
