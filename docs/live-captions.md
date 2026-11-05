@@ -4,11 +4,23 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 
 ## 开始使用
 
-1. 打开 **实时字幕 → 语音识别 → 配置…**。在模型管理的「语音识别」页添加配置，选择 **阿里云千问** 或 **Realtime 转写（兼容）**。阿里云默认填好模型与北京地域地址，只需填写对应地域的百炼 API Key；也可选择新加坡或填写业务空间专属地址。语音识别配置与「翻译与辅助」配置分开。
+1. 打开 **实时字幕 → 语音识别 → 配置…**。添加配置默认选择 **阿里云 Paraformer**，已填好北京地址和 `paraformer-realtime-v2`，填写北京地域的百炼 API Key。也可选原有 **阿里云千问** 或 **Realtime 转写（兼容）**。语音识别配置与「翻译与辅助」配置分开。
 2. 点「检查连接」可验证转写会话是否就绪，不会采集声音。保存后回到字幕窗口，选择该识别服务。
-3. 选择 **全部系统声音** 或一个正在运行的应用。浏览器按整个应用采音，首版不区分标签页。可以选择包含自己的麦克风，此时增加一路独立识别连接。
+3. 在 **识别声音** 选择 **仅麦克风**、**仅系统声音** 或 **系统声音和麦克风**。两个单路模式只开启一条识别连接；双路会分别采集、分别识别，可能分别计费。选系统声音时，再指定全部系统声音或正在运行的应用；浏览器按整个应用采音，不区分标签页。旧版勾选麦克风的设置升级为「仅麦克风」，双路需要重新明确选择。
 4. 选择苹果或已配置的翻译服务，以及原文/目标语言。原文语言用于翻译方向；识别接口自行识别输入语音。字幕使用当前翻译场景的术语与语气；全局上下文开启时，仅传入之前的字幕作为参考。
-5. 点 **开始字幕**。首次采集需要用户在 macOS 确认系统音频录制权限；开启麦克风时还需要麦克风权限。只预览提词器或测试音频文件不需要录制桌面声音。
+5. 点 **开始字幕**。仅麦克风模式只使用麦克风权限；系统声音模式使用系统音频录制权限，双路需要两种权限。只预览提词器或测试音频文件不采集麦克风和桌面声音。
+
+![Paraformer 与仅麦克风设置](images/live-captions-settings-zh.jpg)
+
+### 36K 与免费额度
+
+Paraformer 实时识别的 **36K 秒 = 36,000 秒 = 600 分钟 = 10 小时**。官方北京地域价格页列出每月发放 10 小时额度，当月有效，不累计；具体可用额度以你的控制台为准。它不是不限量服务，超额可能按量收费。请在百炼开启该模型的 **免费额度用完即停**，并确认 ASR 模型权限已开通。Poieva 不读取云端账单或修改该开关。
+
+同一时间两路声音会分别消耗用量。测试自己说话请选「仅麦克风」；只听会议对方声音请选「仅系统声音」。静音时长也可能进入服务商计量，不要用说了几句话推算费用。结束时点暂停或停止。
+
+`qwen-audio-3.1-asr-flash-streaming` 的 1M 是 Token 额度，不能与 36K 秒直接相加。`sambert`、`tts` 是语音合成，不能用于字幕识别。本版先接入 Paraformer 和单路采音，其他 ASR 协议及额度自动路由留待后续，不会自动切换或回退到付费模型。
+
+依据：[模型价格与月度额度](https://help.aliyun.com/zh/model-studio/model-pricing)、[免费额度与用完即停](https://help.aliyun.com/zh/model-studio/new-free-quota)。
 
 字幕在主屏幕顶部中央展开。有刘海时，黑色表面从屏幕顶缘连续展开；收起时，字幕图标和展开按钮位于刘海两侧。默认显示当前一句，原文小字、译文大字；原文可关闭，字号和显示屏可调整。部分识别文字先显示，只有最终确定的句子才触发翻译，避免每个字都重复发送。
 
@@ -33,7 +45,16 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 
 ## API 要求
 
-目前支持两类专门的语音转写接口。文字 Chat Completions 地址、普通 HTTP 翻译接口或任意一个聊天模型不会自动获得语音识别能力。
+目前支持以下三类专门的语音转写接口。文字 Chat Completions 地址、普通 HTTP 翻译接口或任意一个聊天模型不会自动获得语音识别能力。
+
+### 阿里云 Paraformer
+
+- 本版适配 `paraformer-realtime-v2`（16 kHz），默认地址 `wss://dashscope.aliyuncs.com/api-ws/v1/inference`。也可使用官方推荐的 `wss://业务空间ID.cn-beijing.maas.aliyuncs.com/api-ws/v1/inference`，只支持北京地域。模型放在启动任务正文中，URL 不带 `model` 或 `intent` 参数。
+- 发送带 UUID 的 `run-task`，收到同一任务的 `task-started` 后才采音。输入为单声道、小端 PCM16 / 16 kHz，使用 WebSocket 二进制帧发送。服务端 VAD 分句阈值为 600 ms，开启服务心跳以支持持续静音输入。
+- 按句子的 `begin_time` 关联完整草稿与最终结果，草稿替换不拼接，忽略心跳文本。只有 `sentence_end=true` 的最终文字触发翻译。文件回放使用同一 `task_id` 的 `finish-task`，等待 `task-finished` 和最后一句翻译后自动暂停。
+- 与原有千问配置使用相同来源的阿里云地址时，可在原配置中切换类型，保留已保存的密钥；更换服务来源仍需明确替换或清除密钥。
+
+官方协议：[连接地址](https://help.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service)、[客户端事件](https://help.aliyun.com/zh/model-studio/paraformer-client-events)、[服务端事件](https://help.aliyun.com/zh/model-studio/paraformer-server-events)。
 
 ### 阿里云千问
 
@@ -60,9 +81,9 @@ Poieva 可以将应用播放的声音转换为文字，再使用现有翻译服�
 
 1. 在模型管理中为阿里云配置点 **检查连接**，成功后保存。该按钮只验证会话，不采音，也不证明语音识别质量。
 2. 在腾讯会议创建自己的测试会议，用手机作为第二个参会端加入。电脑端麦克风静音，手机端读公开例句；让电脑端能听到来自手机的会议声音。
-3. Poieva 的声音来源选 **腾讯会议**，翻译服务选 **苹果系统翻译**，目标语言设为 **简体中文**。先关闭「同时识别我的麦克风」，单独验证会议传来的声音。
+3. Poieva 选择 **仅系统声音 → 腾讯会议**，翻译服务选 **苹果系统翻译**，目标语言设为 **简体中文**，单独验证会议传来的声音。
 4. 点 **开始字幕**，首次录音权限由你在 macOS 中确认。手机端读：`Today's meeting is about the project timeline. We plan to finish the first version next Friday.` 检查顶部是否先出现英文，再出现对应中文。
-5. 单人会议没有远端声音。只有一台设备时，可勾选 **同时识别我的麦克风** 做本人语音测试，但这验证的是独立麦克风路径，不能据此认定腾讯会议的对方声音已通过。
+5. 单人会议没有远端声音。只有一台设备时，可选 **仅麦克风** 做本人语音测试，但这验证的是独立麦克风路径，不能据此认定腾讯会议的对方声音已通过。
 6. 测试后点 **暂停** 或 **停止** 关闭采音与 API 连接。若有问题，反馈界面错误和声音来源即可。
 
 ## 隐私和运行方式
@@ -81,15 +102,23 @@ Poieva 不将音频或字幕写入历史、日志或配置文件。内存中只�
 
 *v0.4.0 链路验收截图，当前顶部样式见上方预览图。识别原文由本机固定协议样例返回，中文来自实际苹果翻译。文件测试完成后自动暂停并关闭连接。*
 
-本机样例不是语音识别模型，不能证明识别准确率或云端延迟。用户自行配置阿里云并勾选「同时识别我的麦克风」后，实际反馈可用、速度可接受。麦克风识别与翻译路径已获得真实使用反馈；延迟尚未量化。腾讯会议远端音频、飞书、浏览器、音频设备切换、长时间运行、全屏与多屏组合仍需分别验收。受保护视频的声音可能无法采集，首版不承诺所有视频或会议应用兼容。
+Paraformer 新增客户端协议、二进制音频、任务匹配、草稿/最终结果、额度错误、取消以及声源迁移检查；本机公开 AIFF 经真实应用重采样、固定 Paraformer 协议样例和实际苹果翻译，显示 `Hello, how are you? → 你好，你好吗？`，结束后自动暂停。
+
+![Paraformer 固定协议样例与实际苹果翻译](images/live-captions-paraformer-test-zh.jpg)
+
+本机样例不是语音识别模型，不能证明识别准确率或云端延迟。此前千问版本的麦克风路径得到用户可用、速度可接受的反馈；本版 Paraformer 的真实云端识别尚待用户确认免费额度与用完即停后测试。腾讯会议远端音频、飞书、浏览器、设备切换、长时间运行、全屏与多屏仍需分别验收。受保护视频的声音可能无法采集，不承诺所有应用兼容。
 
 ## English
 
-Open **Live Captions** from the translation window’s toolbar or the app/menu-bar menu. Under **Model Management → Speech Recognition**, choose **Alibaba Cloud Qwen** or **Realtime transcription (compatible)**, then select an audio source, your translator and target language. Speech configurations are separate from existing text translation and assistant configurations. A text-only model or ordinary translation endpoint is not sufficient.
+Open **Live Captions** from the toolbar or app/menu-bar menu. New speech configurations default to **Alibaba Cloud Paraformer**, with the Beijing endpoint and `paraformer-realtime-v2` prefilled. Confirm your cloud quota, enable **Stop When Free Quota Runs Out** in Model Studio and enter the Beijing API key. The listed monthly 36K-second allowance equals 10 hours; it is not unlimited, does not roll over, and actual account eligibility is controlled by the provider. Qwen and Realtime-compatible types remain available.
+
+Choose **Microphone only**, **System audio only**, or **System audio and microphone**. Each single-input mode opens exactly one recognition connection; both inputs may be billed separately. Upgrading the old additive microphone checkbox selects microphone-only, never silently restores two connections. File testing always uses a single file input. No automatic model routing is included in this version.
+
+Paraformer uses UUID-correlated `run-task` / `task-started`, 16 kHz mono binary PCM frames, server VAD and corrected sentence snapshots. File replay drains with `finish-task` / `task-finished`. The original Qwen Realtime protocol and generic Realtime protocol remain separate. Keys can be retained when switching between Ali speech protocols on the same origin; keys are not moved to a different origin.
 
 For Qwen, the model and Beijing endpoint are filled in by default; enter your region's Model Studio API key, or select Singapore/use a workspace-specific endpoint. Qwen receives 16 kHz mono PCM16 with server VAD. Its corrected full-sentence previews replace earlier drafts. File tests send `session.finish` and wait for `session.finished` and the final translation before pausing. The original Realtime-compatible type keeps 24 kHz PCM16 and client-side turn commits; old configurations retain that type.
 
-Start captions to request system audio recording permission; optionally include your microphone as a separate recognition connection. A continuous dark surface expands from the display edge around the notch, with compact controls on either side when collapsed. On displays without a notch, it appears below the menu bar. It shows the current source/translated sentence, supports collapse, pause, text size and display selection, and does not take keyboard focus. Translation reuses Apple or your existing configured service and the active scene. Browser audio is captured per application, not per tab.
+Starting captions requests permission for the selected source: microphone access for microphone-only, system audio recording for system-only, and both for dual input. A continuous dark surface expands from the display edge around the notch, with compact controls on either side when collapsed. On displays without a notch, it appears below the menu bar. It shows the current source/translated sentence, supports collapse, pause, text size and display selection, and does not take keyboard focus. Translation reuses Apple or your existing configured service and the active scene. Browser audio is captured per application, not per tab.
 
 The top display uses public AppKit window and screen-geometry APIs; it is not the system iPhone Dynamic Island. Apple's Live Activities on Mac are mirrored from a paired iPhone into the menu bar. Poieva's local captions do not require an iPhone.
 
@@ -97,4 +126,4 @@ The top display uses public AppKit window and screen-geometry APIs; it is not th
 
 The client has bounded buffers and translation queues, correlates results by item ID, and rejects late results after cancellation. Errors pause the session without automatic retries or reconnects. Recognition does not run a local AI model. The audio tap does not replace default audio devices or install a virtual driver.
 
-Validation used public synthetic audio, fixed loopback WebSocket responses and real Apple translation. This checks the application pipeline, not speech recognition quality. After configuring Alibaba Qwen independently and enabling Include My Microphone, the user reported working microphone transcription and translation with acceptable perceived speed. Latency has not been measured; Tencent Meeting remote audio remains a separate pending test. To test Tencent Meeting's remote audio, join your own meeting from a second device, mute the computer microphone, select Tencent Meeting as the source and read the public English sample above from the other device. A single-person microphone test covers a separate input path. Long sessions and device/display combinations still need live testing. See [verification notes](verification.md).
+Validation used public synthetic audio, fixed loopback WebSocket responses and real Apple translation. The new Paraformer path completed an in-app file test and paused automatically, without a cloud speech call. The earlier Qwen microphone path received positive user feedback; that does not establish live Paraformer quality or measured latency. To test Tencent Meeting's remote audio, use System audio only, join your own meeting from another device, mute the computer microphone and read the public sample from the other device. Long sessions and device/display combinations still need live testing. See [verification notes](verification.md).

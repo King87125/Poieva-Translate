@@ -61,7 +61,9 @@ public enum RealtimeTranscriptionProtocol {
         case "error", "conversation.item.input_audio_transcription.failed":
             let error = root["error"] as? [String: Any], code = (error?["code"] as? String ?? "").lowercased()
             if ["invalid_api_key", "invalidapikey", "authentication_error", "permission_denied", "accessdenied"].contains(code) { throw CaptionFailure.authentication }
-            if ["rate_limit_exceeded", "insufficient_quota"].contains(code) || code.hasPrefix("throttling") || code.hasPrefix("allocationquota") { throw CaptionFailure.rateLimit }
+            if code.hasPrefix("allocationquota") { throw CaptionFailure.quotaExhausted }
+            if code.contains("arrears") || code.contains("insufficientbalance") { throw CaptionFailure.billing }
+            if ["rate_limit_exceeded", "insufficient_quota"].contains(code) || code.hasPrefix("throttling") { throw CaptionFailure.rateLimit }
             throw CaptionFailure.response
         default: return nil
         }
@@ -87,6 +89,7 @@ public final class RealtimeTranscriber {
     private var generation = UUID()
     private var kind: SpeechServiceKind = .realtime
     private var inputFinished = false
+    private var taskID = UUID().uuidString
     public var sampleRate: Int { kind.sampleRate }
     public var usesServerVAD: Bool { kind.usesServerVAD }
     public init() {
@@ -98,6 +101,7 @@ public final class RealtimeTranscriber {
         let value = try configuration.validated()
         guard socket == nil, !Task.isCancelled else { throw CancellationError() }
         kind = value.kind; inputFinished = false
+        taskID = UUID().uuidString
         guard !(key ?? "").contains(where: { $0.isNewline || $0 == "\0" }) else { throw CaptionFailure.configuration }
         let settings = URLSessionConfiguration.ephemeral
         settings.urlCache = nil; settings.httpCookieStorage = nil; settings.urlCredentialStorage = nil
@@ -118,7 +122,11 @@ public final class RealtimeTranscriber {
                         do { try await Task.sleep(for: .seconds(15)); self?.fail(CaptionFailure.timeout) } catch {}
                     }
                     Task { @MainActor [weak self] in
-                        do { try await socket.send(.string(RealtimeTranscriptionProtocol.configuration(model: value.model, kind: value.kind))) }
+                        do {
+                            guard let self, self.generation == id else { return }
+                            let message = value.kind == .alibabaParaformer ? try ParaformerTranscriptionProtocol.start(model: value.model, taskID: self.taskID) : try RealtimeTranscriptionProtocol.configuration(model: value.model, kind: value.kind)
+                            try await socket.send(.string(message))
+                        }
                         catch { if self?.generation == id { self?.fail(self?.mapped(error) ?? CaptionFailure.connection) } }
                     }
                 }
@@ -134,11 +142,16 @@ public final class RealtimeTranscriber {
                 let data: Data
                 switch message { case .data(let value): data = value; case .string(let value): data = Data(value.utf8); @unknown default: throw CaptionFailure.response }
                 guard data.count <= 65_536 else { throw CaptionFailure.response }
+                if configuration.kind == .alibabaParaformer, ready != nil, ParaformerTranscriptionProtocol.isReady(data, taskID: taskID) {
+                    timeout?.cancel(); timeout = nil; ready?.resume(); ready = nil
+                }
                 if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any], object["type"] as? String == "session.updated", ready != nil {
                     guard RealtimeTranscriptionProtocol.sessionIsReady(data, configuration: configuration) else { throw CaptionFailure.response }
                     timeout?.cancel(); timeout = nil; ready?.resume(); ready = nil
                 }
-                if let event = try RealtimeTranscriptionProtocol.event(data, kind: configuration.kind) {
+                let event = configuration.kind == .alibabaParaformer ? try ParaformerTranscriptionProtocol.event(data, taskID: taskID) : try RealtimeTranscriptionProtocol.event(data, kind: configuration.kind)
+                if let event {
+                    guard ready == nil else { throw CaptionFailure.response }
                     if case .dropped = continuation.yield(event) { throw CaptionFailure.backlog }
                     if event == .finished { continuation.finish(); close(); return }
                 }
@@ -151,6 +164,10 @@ public final class RealtimeTranscriber {
         switch action {
         case .append(let pcm):
             guard !pcm.isEmpty, pcm.count <= sampleRate * 4 / 5, pcm.count.isMultiple(of: 2) else { throw CaptionFailure.audioFormat }
+            if kind == .alibabaParaformer {
+                do { try await socket.send(.data(pcm)); try Task.checkCancellation(); return }
+                catch { throw mapped(error) }
+            }
             var body = ["type": "input_audio_buffer.append", "audio": pcm.base64EncodedString()]
             if kind == .alibabaQwen { body["event_id"] = UUID().uuidString }
             message = try RealtimeTranscriptionProtocol.json(body)
@@ -164,14 +181,18 @@ public final class RealtimeTranscriber {
     /// File replay flushes the last Qwen turn and waits for session.finished.
     /// Pause/stop still cancel immediately instead of submitting additional audio.
     public func finishInput() async throws {
-        guard let socket, ready == nil, !inputFinished, kind == .alibabaQwen else { throw CaptionFailure.connection }
+        guard let socket, ready == nil, !inputFinished, usesServerVAD else { throw CaptionFailure.connection }
         inputFinished = true
-        do { try await socket.send(.string(RealtimeTranscriptionProtocol.json(["type": "session.finish", "event_id": UUID().uuidString]))) }
+        do {
+            let message = kind == .alibabaParaformer ? try ParaformerTranscriptionProtocol.finish(taskID: taskID) : try RealtimeTranscriptionProtocol.json(["type": "session.finish", "event_id": UUID().uuidString])
+            try await socket.send(.string(message))
+        }
         catch { throw mapped(error) }
     }
     private func mapped(_ error: Error) -> Error {
         if error is CaptionFailure || error is CancellationError { return error }
         if let status = (socket?.response as? HTTPURLResponse)?.statusCode {
+            if status == 402 { return CaptionFailure.billing }
             if [401,403].contains(status) { return CaptionFailure.authentication }
             if status == 429 { return CaptionFailure.rateLimit }
             if status >= 500 { return CaptionFailure.unavailable }

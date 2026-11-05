@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 public enum CaptionFailure: LocalizedError {
-    case configuration, microphone, capture, sourceGone, audioFormat, backlog, connection, timeout, authentication, rateLimit, response, unavailable, noService
+    case configuration, microphone, capture, sourceGone, audioFormat, backlog, connection, timeout, authentication, rateLimit, response, unavailable, noService, quotaExhausted, billing
     public var errorDescription: String? {
         switch self {
         case .configuration: return L10n.tr("请填写有效的识别服务名称、地址和模型。")
@@ -11,24 +11,41 @@ public enum CaptionFailure: LocalizedError {
         case .sourceGone: return L10n.tr("声音来源已退出，请重新选择应用。")
         case .audioFormat: return L10n.tr("当前音频格式无法处理，请更换声音来源后重试。")
         case .backlog: return L10n.tr("处理速度跟不上声音，字幕已暂停，请检查网络或更换服务。")
-        case .connection: return L10n.tr("语音识别连接已中断，字幕已暂停，请手动重新开始。")
+        case .connection: return L10n.tr("无法连接语音识别服务，请检查网络、服务额度或账单后重试。")
         case .timeout: return L10n.tr("语音识别服务未及时响应，请检查接口后重试。")
         case .authentication: return L10n.tr("识别服务拒绝访问，请检查密钥和模型权限。")
         case .rateLimit: return L10n.tr("识别服务额度不足或请求过于频繁，请稍后重试。")
         case .response: return L10n.tr("识别服务返回了无效结果，字幕已暂停。")
         case .unavailable: return L10n.tr("识别服务暂时不可用，请稍后重试。")
         case .noService: return L10n.tr("请先添加语音识别 API。")
+        case .quotaExhausted: return L10n.tr("识别服务的免费额度已耗尽，请在服务商控制台查看。")
+        case .billing: return L10n.tr("识别服务因账户欠费暂停，请在服务商控制台查看账单。")
         }
     }
 }
 
 public enum SpeechServiceKind: String, Codable, CaseIterable, Sendable {
-    case realtime, alibabaQwen
-    public var name: String { self == .alibabaQwen ? L10n.tr("阿里云千问") : L10n.tr("Realtime 转写（兼容）") }
-    public var sampleRate: Int { self == .alibabaQwen ? 16_000 : 24_000 }
-    public var usesServerVAD: Bool { self == .alibabaQwen }
-    public var defaultBaseURL: String { self == .alibabaQwen ? "wss://dashscope.aliyuncs.com/api-ws/v1/realtime" : "" }
-    public var defaultModel: String { self == .alibabaQwen ? "qwen3-asr-flash-realtime" : "" }
+    case realtime, alibabaQwen, alibabaParaformer
+    public var name: String {
+        switch self {
+        case .realtime: return L10n.tr("Realtime 转写（兼容）")
+        case .alibabaQwen: return L10n.tr("阿里云千问")
+        case .alibabaParaformer: return L10n.tr("阿里云 Paraformer")
+        }
+    }
+    public var isAlibaba: Bool { self != .realtime }
+    public var sampleRate: Int { isAlibaba ? 16_000 : 24_000 }
+    public var usesServerVAD: Bool { isAlibaba }
+    public var defaultBaseURL: String {
+        switch self {
+        case .realtime: return ""
+        case .alibabaQwen: return "wss://dashscope.aliyuncs.com/api-ws/v1/realtime"
+        case .alibabaParaformer: return "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+        }
+    }
+    public var defaultModel: String {
+        switch self { case .realtime: return ""; case .alibabaQwen: return "qwen3-asr-flash-realtime"; case .alibabaParaformer: return "paraformer-realtime-v2" }
+    }
 }
 
 /// A speech-only endpoint. Never reused as a text translator.
@@ -58,21 +75,22 @@ public struct SpeechServiceConfiguration: Codable, Equatable, Identifiable, Send
         guard raw.count <= 2048, var url = URLComponents(string: raw), let host = url.host, !host.isEmpty,
               url.user == nil, url.password == nil, url.fragment == nil else { throw CaptionFailure.configuration }
         let expectedQuery = kind == .alibabaQwen ? URLQueryItem(name: "model", value: result.model) : URLQueryItem(name: "intent", value: "transcription")
-        guard url.queryItems == nil || url.queryItems == [expectedQuery] else { throw CaptionFailure.configuration }
+        guard url.queryItems == nil || kind != .alibabaParaformer && url.queryItems == [expectedQuery] else { throw CaptionFailure.configuration }
         let scheme = url.scheme?.lowercased(), local = ["localhost", "127.0.0.1", "::1", "[::1]"].contains(host.lowercased())
         guard scheme == "https" || scheme == "wss" || local && (scheme == "http" || scheme == "ws") else { throw CaptionFailure.configuration }
         url.scheme = scheme == "https" || scheme == "wss" ? "wss" : "ws"
         url.host = host.lowercased(); url.query = nil
         url.path = url.path.replacingOccurrences(of: #"/+$"#, with: "", options: .regularExpression)
-        if url.path.isEmpty { url.path = kind == .alibabaQwen ? "/api-ws/v1/realtime" : "/v1/realtime" }
-        else if url.path.hasSuffix("/v1") { url.path += "/realtime" }
+        if url.path.isEmpty { url.path = kind == .alibabaParaformer ? "/api-ws/v1/inference" : (kind == .alibabaQwen ? "/api-ws/v1/realtime" : "/v1/realtime") }
+        else if url.path.hasSuffix("/v1") { url.path += kind == .alibabaParaformer ? "/inference" : "/realtime" }
+        if kind == .alibabaParaformer, result.model != "paraformer-realtime-v2" { throw CaptionFailure.configuration }
         guard let canonical = url.url?.absoluteString else { throw CaptionFailure.configuration }
         result.baseURL = canonical
         return result
     }
     public var endpoint: URL {
         var url = URLComponents(string: baseURL)!
-        url.queryItems = [kind == .alibabaQwen ? URLQueryItem(name: "model", value: model) : URLQueryItem(name: "intent", value: "transcription")]
+        url.queryItems = kind == .alibabaParaformer ? nil : [kind == .alibabaQwen ? URLQueryItem(name: "model", value: model) : URLQueryItem(name: "intent", value: "transcription")]
         return url.url!
     }
     public var origin: String {
@@ -120,7 +138,7 @@ public final class SpeechServiceStore: ObservableObject {
         return clear ? nil : (!key.isEmpty ? key : try self.key(for: value.id))
     }
     private func validateReuse(_ value: SpeechServiceConfiguration, key: String, clear: Bool) throws {
-        if let old = configurations.first(where: { $0.id == value.id }), old.origin != value.origin || old.kind != value.kind,
+        if let old = configurations.first(where: { $0.id == value.id }), old.origin != value.origin || old.kind != value.kind && !(old.kind.isAlibaba && value.kind.isAlibaba),
            hasKey(value.id), key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !clear {
             throw ServiceConfigurationFailure.invalid(L10n.tr("服务地址已更改，请重新填写密钥，或清除已保存的密钥。"))
         }

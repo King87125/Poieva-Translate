@@ -14,27 +14,27 @@ final class CaptionSettings: ObservableObject {
     @Published var source: AppLanguage { didSet { save() } }
     @Published var target: AppLanguage { didSet { save() } }
     @Published var audioBundleID: String { didSet { save() } }
-    @Published var includeMicrophone: Bool { didSet { save() } }
+    @Published var audioInput: CaptionAudioInput { didSet { save() } }
     @Published var showOriginal: Bool { didSet { save() } }
     @Published var fontSize: Double { didSet { save() } }
     @Published var screenID: String { didSet { save() } }
     private let defaults: UserDefaults
     private struct Saved: Codable {
         var speechID: UUID?; var translationID: String; var source: AppLanguage; var target: AppLanguage
-        var audioBundleID: String; var includeMicrophone: Bool; var showOriginal: Bool; var fontSize: Double; var screenID: String
+        var audioBundleID: String; var includeMicrophone: Bool; var audioInput: String?; var showOriginal: Bool; var fontSize: Double; var screenID: String
     }
     init(defaults: UserDefaults, defaultTranslator: String) {
         self.defaults = defaults
-        let old = defaults.data(forKey: "liveCaptionSettings.v1").flatMap { try? JSONDecoder().decode(Saved.self, from: $0) }
+        let old = (defaults.data(forKey: "liveCaptionSettings.v2") ?? defaults.data(forKey: "liveCaptionSettings.v1")).flatMap { try? JSONDecoder().decode(Saved.self, from: $0) }
         speechID = old?.speechID; translationID = old?.translationID ?? defaultTranslator
         source = old?.source ?? .automatic; target = old?.target ?? .simplifiedChinese
-        audioBundleID = old?.audioBundleID ?? ""; includeMicrophone = old?.includeMicrophone ?? false
+        audioBundleID = old?.audioBundleID ?? ""; audioInput = .migrated(raw: old?.audioInput, legacyMicrophone: old?.includeMicrophone ?? false)
         showOriginal = old?.showOriginal ?? true; fontSize = min(30, max(18, old?.fontSize ?? 23)); screenID = old?.screenID ?? ""
     }
     private func save() {
         let value = Saved(speechID: speechID, translationID: translationID, source: source, target: target,
-            audioBundleID: audioBundleID, includeMicrophone: includeMicrophone, showOriginal: showOriginal, fontSize: fontSize, screenID: screenID)
-        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: "liveCaptionSettings.v1") }
+            audioBundleID: audioBundleID, includeMicrophone: audioInput == .both, audioInput: audioInput.rawValue, showOriginal: showOriginal, fontSize: fontSize, screenID: screenID)
+        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: "liveCaptionSettings.v2") }
     }
 }
 
@@ -67,6 +67,7 @@ final class LiveCaptionModel: ObservableObject {
     private var sampleCompletions: Set<String> = []
     private var notificationTokens: [NSObjectProtocol] = []
     var isActive: Bool { phase == .connecting || phase == .listening }
+    var audioDescription: String { sampleURL == nil ? settings.audioInput.name : L10n.tr("音频文件") }
     var status: String {
         switch phase {
         case .idle: return L10n.tr("实时字幕")
@@ -103,36 +104,39 @@ final class LiveCaptionModel: ObservableObject {
         guard !isActive else { return }
         stopResources(); transcript.stop(clear: true); error = ""
         let id = UUID(); revision = id; phase = .connecting; expanded = true; islandVisible = true; onShowIsland?()
-        let chosenID = settings.speechID, bundleID = settings.audioBundleID, microphone = settings.includeMicrophone && file == nil
+        let chosenID = settings.speechID, bundleID = settings.audioBundleID, inputs = settings.audioInput.channels(isFile: file != nil)
         let translator = recipe(settings.translationID, settings.source, settings.target)
-        sourceBundleID = file == nil ? bundleID : ""
+        sourceBundleID = file == nil && inputs.contains(.system) ? bundleID : ""
         sampleURL = file; scopedSample = file?.startAccessingSecurityScopedResource() ?? false
         sampleEnded = false; sampleCommits = 0; sampleCompletions = []; sampleRecognitionFinished = false; sampleRequiresFinish = false
         startTask = Task { @MainActor [weak self] in
             guard let self else { return }
             do {
-                if file == nil, !bundleID.isEmpty,
+                if file == nil, inputs.contains(.system), !bundleID.isEmpty,
                    !NSWorkspace.shared.runningApplications.contains(where: { $0.bundleIdentifier == bundleID }) { throw CaptionFailure.sourceGone }
                 guard let configuration = self.speechServices.configurations.first(where: { $0.id == chosenID }) else { throw CaptionFailure.noService }
                 self.sampleRequiresFinish = configuration.kind.usesServerVAD
                 let key = try self.speechServices.key(for: configuration.id)
                 self.transcript.start(provider: translator.provider, request: translator.request)
-                let system = try await self.connect(configuration, key: key, channel: "system", revision: id)
-                let mic = microphone ? try await self.connect(configuration, key: key, channel: "mic", revision: id) : nil
+                var connected: [CaptionInputChannel: RealtimeTranscriber] = [:]
+                for input in inputs {
+                    connected[input] = try await self.connect(configuration, key: key, channel: input == .microphone ? "mic" : "system", revision: id)
+                }
                 try Task.checkCancellation(); guard self.revision == id else { return }
-                if let file {
+                if let file, let system = connected[.system] {
                     self.consume(try CaptionAudioCapture.replay(file, sampleRate: system.sampleRate), socket: system, revision: id)
                 } else {
-                    // Each input has its own clock and recognition session; no
-                    // mixing/double counting of the microphone and meeting audio.
-                    let capture = CaptionAudioCapture(); self.captures.append(capture)
-                    if let mic {
-                        let microphoneCapture = CaptionAudioCapture(); self.captures.append(microphoneCapture)
-                        let frames = try await microphoneCapture.startMicrophone(sampleRate: mic.sampleRate)
+                    // Create exactly the explicitly selected inputs. Microphone
+                    // mode never opens a hidden system-audio tap or socket.
+                    for input in inputs {
+                        guard let socket = connected[input] else { throw CaptionFailure.configuration }
+                        let capture = CaptionAudioCapture(); self.captures.append(capture)
+                        let frames: AsyncThrowingStream<CaptionAudioFrame, Error>
+                        if input == .microphone { frames = try await capture.startMicrophone(sampleRate: socket.sampleRate) }
+                        else { frames = try capture.startSystem(bundleID: bundleID.isEmpty ? nil : bundleID, sampleRate: socket.sampleRate) }
                         try Task.checkCancellation(); guard self.revision == id else { return }
-                        self.consume(frames, socket: mic, revision: id)
+                        self.consume(frames, socket: socket, revision: id)
                     }
-                    self.consume(try capture.startSystem(bundleID: bundleID.isEmpty ? nil : bundleID, sampleRate: system.sampleRate), socket: system, revision: id)
                 }
                 self.phase = .listening; self.startTask = nil
             } catch {

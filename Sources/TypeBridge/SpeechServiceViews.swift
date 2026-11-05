@@ -28,14 +28,14 @@ struct SpeechServiceManagementView: View {
                 .overlay { if store.configurations.isEmpty { Text(L10n.tr("添加自己的识别服务，开始使用实时字幕。")).foregroundStyle(.secondary).allowsHitTesting(false) } }
             HStack(spacing: 10) {
                 Button(L10n.tr("添加…"), systemImage: "plus") {
-                    editing = .init(name: SpeechServiceKind.alibabaQwen.name, baseURL: SpeechServiceKind.alibabaQwen.defaultBaseURL,
-                                    model: SpeechServiceKind.alibabaQwen.defaultModel, kind: .alibabaQwen)
+                    editing = .init(name: SpeechServiceKind.alibabaParaformer.name, baseURL: SpeechServiceKind.alibabaParaformer.defaultBaseURL,
+                                    model: SpeechServiceKind.alibabaParaformer.defaultModel, kind: .alibabaParaformer)
                 }
                 Button(L10n.tr("编辑…")) { editing = selected }.disabled(selected == nil)
                 Button(L10n.tr("删除"), role: .destructive) { deleting = true }.disabled(selected == nil)
                 Spacer()
             }
-            Text(L10n.tr("支持阿里云千问和 Realtime 转写兼容接口。密钥保存在本机钥匙串。"))
+            Text(L10n.tr("支持 Paraformer、千问和 Realtime 转写兼容接口。密钥保存在本机钥匙串。"))
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if !error.isEmpty || !store.issue.isEmpty { Text(error.isEmpty ? store.issue : error).font(.caption).foregroundStyle(.red) }
         }.padding(20)
@@ -97,10 +97,11 @@ private struct SpeechServiceEditor: View {
                         }
                         if store.hasKey(configuration.id) { Toggle(L10n.tr("清除已保存的密钥"), isOn: $clearKey) }
                     }
-                    Text(configuration.kind == .alibabaQwen ? L10n.tr("填写所选地域的百炼 API Key。北京与新加坡的密钥不能混用，也可填写业务空间专属地址。") : L10n.tr("请使用兼容 Realtime 转写的语音 API，填写服务商提供的地址和转写模型。"))
+                    Text(configuration.kind == .alibabaParaformer ? L10n.tr("使用北京地域的百炼 API Key。36K 秒等于 10 小时；免费额度请在控制台确认，并开启用完即停。") : (configuration.kind == .alibabaQwen ? L10n.tr("填写所选地域的百炼 API Key。北京与新加坡的密钥不能混用，也可填写业务空间专属地址。") : L10n.tr("请使用兼容 Realtime 转写的语音 API，填写服务商提供的地址和转写模型。")))
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    if configuration.kind == .alibabaQwen {
-                        Link(L10n.tr("阿里云接入说明"), destination: URL(string: "https://help.aliyun.com/zh/model-studio/qwen-asr-realtime-interaction-process")!).font(.caption)
+                    if configuration.kind.isAlibaba {
+                        Link(L10n.tr("阿里云接入说明"), destination: URL(string: configuration.kind == .alibabaParaformer ? "https://help.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service" : "https://help.aliyun.com/zh/model-studio/qwen-asr-realtime-interaction-process")!).font(.caption)
+                        Link(L10n.tr("免费额度与用完即停"), destination: URL(string: "https://help.aliyun.com/zh/model-studio/new-free-quota")!).font(.caption)
                     }
                     if !message.isEmpty { Text(message).font(.caption).foregroundStyle(failed ? Color.red : Color.secondary).fixedSize(horizontal: false, vertical: true) }
                 }.padding(20).disabled(busy)

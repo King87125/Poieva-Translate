@@ -30,14 +30,19 @@ struct LiveCaptionSettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     ConfigurationGroup {
+                        ConfigurationField(title: L10n.tr("识别声音")) {
+                            SelectionField(title: L10n.tr("字幕采音方式"), selection: $settings.audioInput,
+                                options: CaptionAudioInput.allCases.map { SelectionOption($0, $0.name) })
+                        }
+                        if settings.audioInput != .microphone {
                         HStack(alignment: .bottom, spacing: 12) {
                             ConfigurationField(title: L10n.tr("声音来源")) {
                                 SelectionField(title: L10n.tr("字幕声音来源"), selection: $settings.audioBundleID, options: applications)
                             }
                             Button { refreshApplications() } label: { Image(systemName: "arrow.clockwise") }.help(L10n.tr("刷新应用列表"))
                         }
-                        Toggle(L10n.tr("同时识别我的麦克风"), isOn: $settings.includeMicrophone)
-                        Text(L10n.tr("浏览器按整个应用采音。开启麦克风会增加一路识别连接。"))
+                        }
+                        Text(settings.audioInput == .both ? L10n.tr("两路声音分别识别，可能分别计费。") : L10n.tr("仅开启所选声音的一路识别连接。"))
                             .font(.caption).foregroundStyle(.secondary)
                     }.disabled(model.isActive)
                     ConfigurationGroup {
@@ -79,7 +84,7 @@ struct LiveCaptionSettingsView: View {
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 if let service = speech.configurations.first(where: { $0.id == settings.speechID }) {
-                    Text(L10n.tr("音频发送至：\(service.name)"))
+                    Text(L10n.tr("音频发送至：\(service.name)") + " · " + model.audioDescription)
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
                 HStack(spacing: 12) {

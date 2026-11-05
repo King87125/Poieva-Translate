@@ -2,7 +2,20 @@
 
 更新日期：2026-11-05。
 
-最新状态：v0.4.2、构建号 72 新增阿里云千问实时识别。265 项完整回归执行通过，包含 5 项真实回环 WebSocket 检查。用户自行填写 API 并勾选「同时识别我的麦克风」后，实际测试反馈可用、速度可接受。已确认麦克风路径，尚未量化延迟；腾讯会议远端声音及其他设备组合仍待单独验收。先前真实 AI 生成、公开音频翻译链路及刘海贴合检查保留为下方历史记录。签名与公证状态沿用预览版安排。
+最新状态：v0.4.3、构建号 74 新增 Paraformer 实时识别与明确的单路采音选择。274 项完整回归执行通过，零跳过，包含 7 项真实回环 WebSocket 检查。原生应用的公开音频文件已通过 Paraformer 固定协议样例、实际苹果翻译和顶部字幕验证；尚未调用真实 Paraformer 云端模型。此前千问麦克风实测、真实 AI 生成及刘海贴合检查保留为历史记录。签名与公证状态沿用预览版安排。
+
+## Paraformer 与单路采音（v0.4.3，构建 74）
+
+- 新增「阿里云 Paraformer」，默认北京地址和 `paraformer-realtime-v2`。使用 UUID 关联启动、就绪、二进制 PCM16 / 16 kHz、分句结果与文件收尾；只在同一任务就绪后采音。草稿完整替换，心跳忽略，最终句子才翻译。免费额度耗尽、欠费与鉴权错误使用固定提示，不反射原始服务返回。
+- 采音明确分为「仅麦克风」「仅系统声音」「系统声音和麦克风」。单路只建对应的一条连接和采集器；文件始终一路。旧版勾选麦克风的设置迁移为仅麦克风，避免升级后隐含开启两路用量；双路必须重新明确选择，界面提示可能分别计费。没有自动重连、模型路由或付费回退。
+- 同来源的阿里云语音协议之间可切换并保留密钥；更换来源仍要求明确替换或清除。已在原生配置页将用户原阿里云服务改为 Paraformer，保存时保留既有密钥，没有读取、导出或显示密钥。
+- 新增 9 项检查覆盖任务格式与匹配、草稿/最终结果/心跳、错误和长度边界、凭据来源隔离、声音选择迁移、单路与文件连接计划，以及真实回环 WebSocket 的二进制音频、最终结果排空、额度失败、错误任务和取消。原有 HTTP 与语音样例同时启用时，274 项、43 个套件执行通过，零跳过。最后的音频文件来源标签修正后，6 项界面语言检查再次通过，正式编译通过。
+- 原生界面使用无密钥临时回环服务和公开合成 AIFF；检查连接成功且不采音。文件经应用实际重采样与 Paraformer 协议样例，顶部显示 `Hello, how are you? → 你好，你好吗？`，中文来自实际苹果翻译，结束后自动暂停。固定样例不是 ASR 模型，不能据此判断云端识别准确率或延迟。
+- 临时服务已删除，本机样例服务已停止。最终应用完整重启后显示「阿里云 Paraformer」「仅麦克风」「苹果系统翻译」，原目标语言、字号与原文开关保留；停留设置页，没有开始录音或调用真实识别。真实 Paraformer 与腾讯会议远端声音仍待确认云端免费额度和「用完即停」后分别验收。
+- 已更新中英文 README、字幕教程、开发及配置说明，并加入真实原生窗口截图。文档说明 36K 秒为每月 10 小时而非不限量、双路用量区别及 1M Token 不能与秒数相加；本版按用户范围暂不做额度路由。
+- 0.4.3 / 74 安装镜像已只读核验版本、完整应用签名、MIT 文本及 Applications 链接；固定密钥组件哈希保持 `20220dee935ece2844a6e248f6a655beb4b97b98`。DMG SHA-256：`fc7675917e5b156848d809c0e43ec2871dce091d7e9e37b8d1a4e42228ba5c93`。
+
+English: v0.4.3 adds Paraformer real-time binary-audio tasks and explicit single-input capture modes. All 274 checks passed, including seven loopback WebSocket checks. A public audio file completed the native Paraformer fixture → actual Apple translation → top-caption path and paused automatically. This verifies the client integration, not live Paraformer quality; no real speech API was called. The original key was retained on the same Alibaba origin. Final restart preserved Paraformer and microphone-only, with capture stopped. Routing is deferred; confirm the provider's free quota and stop-when-exhausted setting before a live test.
 
 ## 阿里云千问实时识别（v0.4.2，构建 72）
 

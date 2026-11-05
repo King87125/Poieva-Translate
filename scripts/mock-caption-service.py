@@ -31,11 +31,11 @@ class Handler(BaseHTTPRequestHandler):
             value.extend(chunk)
         return value
 
-    def receive(self):
+    def receive_frame(self):
         first, second = self.read_exact(2)
         if first & 15 == 8:
             raise EOFError()
-        assert first == 0x81 and second & 0x80
+        assert first in (0x81, 0x82) and second & 0x80
         length = second & 127
         if length == 126:
             length = struct.unpack('!H', self.read_exact(2))[0]
@@ -44,7 +44,12 @@ class Handler(BaseHTTPRequestHandler):
         assert length <= 65536
         mask = self.read_exact(4)
         data = self.read_exact(length)
-        return json.loads(bytes(value ^ mask[index % 4] for index, value in enumerate(data)))
+        return first & 15, bytes(value ^ mask[index % 4] for index, value in enumerate(data))
+
+    def receive(self):
+        opcode, data = self.receive_frame()
+        assert opcode == 1
+        return json.loads(data)
 
     def send(self, value):
         data = json.dumps(value, ensure_ascii=False).encode()
@@ -79,7 +84,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         route = urlsplit(self.path)
         qwen = route.path == '/api-ws/v1/realtime' and set(parse_qs(route.query)) == {'model'}
-        if self.path != '/v1/realtime?intent=transcription' and not qwen:
+        paraformer = (route.path == '/api-ws/v1/inference' or route.path.startswith('/paraformer-')) and not route.query
+        if self.path != '/v1/realtime?intent=transcription' and not qwen and not paraformer:
             self.send_error(404)
             return
         key = self.headers.get('Sec-WebSocket-Key', '')
@@ -91,6 +97,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.connection.settimeout(30)
         try:
+            if paraformer:
+                self.handle_paraformer(route.path)
+                return
             if qwen:
                 self.handle_qwen(parse_qs(route.query)['model'][0])
                 return
@@ -178,6 +187,49 @@ class Handler(BaseHTTPRequestHandler):
                 return
             else:
                 raise AssertionError('Unexpected client event in server VAD mode')
+
+    def handle_paraformer(self, path):
+        import uuid
+        assert self.headers.get('Authorization') in (None, 'Bearer fixture-only-key')
+        request = self.receive()
+        header, payload = request['header'], request['payload']
+        task_id = header['task_id']
+        uuid.UUID(task_id)
+        assert header['action'] == 'run-task' and header['streaming'] == 'duplex'
+        assert payload['task_group'] == 'audio' and payload['task'] == 'asr' and payload['function'] == 'recognition'
+        assert payload['model'] == 'paraformer-realtime-v2' and payload['input'] == {}
+        assert payload['parameters'] == {'format': 'pcm', 'sample_rate': 16000,
+            'semantic_punctuation_enabled': False, 'max_sentence_silence': 600, 'heartbeat': True}
+        def event(name, payload=None, **extra):
+            self.send({'header': {'event': name, 'task_id': task_id, **extra}, 'payload': payload or {}})
+        if path == '/paraformer-quota':
+            event('task-failed', error_code='AllocationQuota.FreeTierOnly', error_message='PRIVATE-ECHO')
+            return
+        if path == '/paraformer-wait':
+            self.receive()
+            return
+        if path == '/paraformer-wrong':
+            self.send({'header': {'event': 'task-started', 'task_id': str(uuid.uuid4())}, 'payload': {}})
+            self.receive()
+            return
+        event('task-started')
+        packets = 0
+        while True:
+            opcode, data = self.receive_frame()
+            if opcode == 2:
+                assert 0 < len(data) <= 12800 and len(data) % 2 == 0
+                packets += 1
+                if packets <= 2:
+                    text = 'Hello,' if packets == 1 else 'Hello, how are you?'
+                    event('result-generated', {'output': {'sentence': {'begin_time': 0, 'text': text, 'sentence_end': False, 'heartbeat': False}}, 'usage': None})
+            else:
+                finish = json.loads(data)
+                assert finish['header'] == {'action': 'finish-task', 'task_id': task_id, 'streaming': 'duplex'}
+                if packets:
+                    event('result-generated', {'output': {'sentence': {'begin_time': 0, 'text': 'Hello, how are you?', 'sentence_end': True, 'heartbeat': False}}, 'usage': {'duration': 1}})
+                event('task-finished')
+                print('Public Paraformer binary PCM turn received and drained by fixed protocol fixture.', flush=True)
+                return
 
 
 if __name__ == '__main__':
