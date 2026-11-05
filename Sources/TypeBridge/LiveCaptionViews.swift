@@ -24,7 +24,7 @@ struct LiveCaptionSettingsView: View {
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button(L10n.tr("预览提词器")) { model.preview() }.disabled(model.isActive)
+                Button(L10n.tr("预览字幕窗口")) { model.preview() }.disabled(model.isActive)
             }.padding(20)
             Divider()
             ScrollView {
@@ -68,10 +68,17 @@ struct LiveCaptionSettingsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }.disabled(model.isActive)
                     ConfigurationGroup {
-                        HStack { Text(L10n.tr("顶部提词器")); Spacer(); Toggle(L10n.tr("显示原文"), isOn: $settings.showOriginal).toggleStyle(.switch).controlSize(.small) }
+                        HStack { Text(L10n.tr("字幕窗口")); Spacer(); Toggle(L10n.tr("显示原文"), isOn: $settings.showOriginal).toggleStyle(.switch).controlSize(.small) }
                         HStack(spacing: 12) {
                             Text(L10n.tr("字幕字号")); Slider(value: $settings.fontSize, in: 18...30, step: 1)
                             Text("\(Int(settings.fontSize))").monospacedDigit().foregroundStyle(.secondary).frame(width: 30)
+                        }
+                        HStack(spacing: 12) {
+                            Text(L10n.tr("背景透明度"))
+                            Slider(value: Binding(get: { 1 - settings.backgroundOpacity }, set: { settings.backgroundOpacity = 1 - $0 }), in: 0.1...0.75, step: 0.05)
+                                .accessibilityLabel(L10n.tr("背景透明度"))
+                            Text("\(Int(((1 - settings.backgroundOpacity) * 100).rounded()))%")
+                                .monospacedDigit().foregroundStyle(.secondary).frame(width: 38)
                         }
                         SelectionField(title: L10n.tr("字幕显示屏"), selection: $settings.screenID,
                             options: [SelectionOption("", L10n.tr("主显示屏"))] + NSScreen.screens.map { SelectionOption(String(($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0), $0.localizedName) })
@@ -89,7 +96,7 @@ struct LiveCaptionSettingsView: View {
                 }
                 HStack(spacing: 12) {
                 Menu(L10n.tr("测试")) {
-                    Button(L10n.tr("预览提词器（不联网）")) { model.preview() }
+                    Button(L10n.tr("预览字幕窗口（不联网）")) { model.preview() }
                     Button(L10n.tr("测试音频文件…")) { importing = true }.disabled(!validRecognizer || !validTranslator)
                 }.disabled(model.isActive)
                 Spacer()
@@ -97,7 +104,7 @@ struct LiveCaptionSettingsView: View {
                     Button(L10n.tr("暂停")) { model.pause() }
                     Button(L10n.tr("停止")) { model.stop() }
                 } else {
-                    if model.islandVisible { Button(L10n.tr("关闭提词器")) { model.stop() } }
+                    if model.captionVisible { Button(L10n.tr("关闭字幕窗口")) { model.stop() } }
                     Button(L10n.tr("开始字幕")) { fileError = ""; model.start() }.buttonStyle(.borderedProminent)
                         .disabled(!validRecognizer || !validTranslator)
                 }

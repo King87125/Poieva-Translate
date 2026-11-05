@@ -17,11 +17,13 @@ final class CaptionSettings: ObservableObject {
     @Published var audioInput: CaptionAudioInput { didSet { save() } }
     @Published var showOriginal: Bool { didSet { save() } }
     @Published var fontSize: Double { didSet { save() } }
+    @Published var backgroundOpacity: Double { didSet { save() } }
     @Published var screenID: String { didSet { save() } }
     private let defaults: UserDefaults
     private struct Saved: Codable {
         var speechID: UUID?; var translationID: String; var source: AppLanguage; var target: AppLanguage
         var audioBundleID: String; var includeMicrophone: Bool; var audioInput: String?; var showOriginal: Bool; var fontSize: Double; var screenID: String
+        var backgroundOpacity: Double?
     }
     init(defaults: UserDefaults, defaultTranslator: String) {
         self.defaults = defaults
@@ -30,10 +32,11 @@ final class CaptionSettings: ObservableObject {
         source = old?.source ?? .automatic; target = old?.target ?? .simplifiedChinese
         audioBundleID = old?.audioBundleID ?? ""; audioInput = .migrated(raw: old?.audioInput, legacyMicrophone: old?.includeMicrophone ?? false)
         showOriginal = old?.showOriginal ?? true; fontSize = min(30, max(18, old?.fontSize ?? 23)); screenID = old?.screenID ?? ""
+        backgroundOpacity = min(0.9, max(0.25, old?.backgroundOpacity ?? 0.65))
     }
     private func save() {
         let value = Saved(speechID: speechID, translationID: translationID, source: source, target: target,
-            audioBundleID: audioBundleID, includeMicrophone: audioInput == .both, audioInput: audioInput.rawValue, showOriginal: showOriginal, fontSize: fontSize, screenID: screenID)
+            audioBundleID: audioBundleID, includeMicrophone: audioInput == .both, audioInput: audioInput.rawValue, showOriginal: showOriginal, fontSize: fontSize, screenID: screenID, backgroundOpacity: backgroundOpacity)
         if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: "liveCaptionSettings.v2") }
     }
 }
@@ -43,12 +46,11 @@ final class LiveCaptionModel: ObservableObject {
     enum Phase { case idle, connecting, listening, paused, failed, preview }
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var error = ""
-    @Published var expanded = true
-    @Published var islandVisible = false
+    @Published var captionVisible = false
     let settings: CaptionSettings
     let transcript = CaptionTranslationController()
     let speechServices: SpeechServiceStore
-    var onShowIsland: (() -> Void)?
+    var onShowCaptionWindow: (() -> Void)?
     var onShowSettings: (() -> Void)?
     private let recipe: (String, AppLanguage, AppLanguage) -> CaptionTranslationRecipe
     private var startTask: Task<Void, Never>?
@@ -103,7 +105,7 @@ final class LiveCaptionModel: ObservableObject {
     func start(file: URL? = nil) {
         guard !isActive else { return }
         stopResources(); transcript.stop(clear: true); error = ""
-        let id = UUID(); revision = id; phase = .connecting; expanded = true; islandVisible = true; onShowIsland?()
+        let id = UUID(); revision = id; phase = .connecting; captionVisible = true; onShowCaptionWindow?()
         let chosenID = settings.speechID, bundleID = settings.audioBundleID, inputs = settings.audioInput.channels(isFile: file != nil)
         let translator = recipe(settings.translationID, settings.source, settings.target)
         sourceBundleID = file == nil && inputs.contains(.system) ? bundleID : ""
@@ -215,14 +217,14 @@ final class LiveCaptionModel: ObservableObject {
         stopResources(); transcript.stop(); phase = .paused
     }
     func stop() {
-        stopResources(); transcript.stop(clear: true); phase = .idle; error = ""; islandVisible = false
+        stopResources(); transcript.stop(clear: true); phase = .idle; error = ""; captionVisible = false
     }
     func configurationChanged() {
         if isActive { pause(); error = L10n.tr("配置已修改，请重新开始字幕。") }
     }
     private func fail(_ error: Error) {
-        stopResources(); transcript.stop(); self.error = error.localizedDescription; phase = .failed; expanded = true
-        islandVisible = true; onShowIsland?()
+        stopResources(); transcript.stop(); self.error = error.localizedDescription; phase = .failed
+        captionVisible = true; onShowCaptionWindow?()
     }
     private func stopResources() {
         revision = UUID(); startTask?.cancel(); startTask = nil; demoTask?.cancel(); demoTask = nil
@@ -234,17 +236,22 @@ final class LiveCaptionModel: ObservableObject {
     }
     func preview() {
         guard !isActive else { return }
-        stopResources(); phase = .preview; error = ""; expanded = true; islandVisible = true
-        transcript.showSample([.init(id: "preview-1", source: "Let's keep the discussion focused.", translation: L10n.tr("我们围绕重点来讨论。"), isFinal: true)])
-        onShowIsland?()
+        stopResources(); phase = .preview; error = ""; captionVisible = true
+        let samples: [CaptionLine] = [
+            .init(id: "preview-1", source: "Let's review the project progress first.", translation: L10n.tr("今天先确认项目进度。"), isFinal: true),
+            .init(id: "preview-2", source: "The first version will be ready next Friday.", translation: L10n.tr("第一版将在下周五完成。"), isFinal: true),
+            .init(id: "preview-3", source: "Let's keep the discussion focused.", translation: L10n.tr("我们围绕重点来讨论。"), isFinal: true),
+            .init(id: "preview-4", source: "Please add your feedback to the shared document.", translation: L10n.tr("请把反馈记在共享文档里。"), isFinal: true),
+            .init(id: "preview-5", source: "We can review the next steps together.", translation: L10n.tr("接下来，我们一起确认后续安排。"), isFinal: true),
+            .init(id: "preview-6", source: "I'll send a short summary after the meeting.", translation: L10n.tr("会议结束后，我会发一份简短总结。"), isFinal: true)
+        ]
+        transcript.showSample(Array(samples.prefix(5)))
+        onShowCaptionWindow?()
         demoTask = Task { @MainActor [weak self] in
             do {
                 try await Task.sleep(for: .seconds(2))
                 guard let self, !Task.isCancelled else { return }
-                self.transcript.showSample([
-                    .init(id: "preview-1", source: "Let's keep the discussion focused.", translation: L10n.tr("我们围绕重点来讨论。"), isFinal: true),
-                    .init(id: "preview-2", source: "We can review the next steps together.", translation: L10n.tr("接下来，我们一起确认后续安排。"), isFinal: true)
-                ])
+                self.transcript.showSample(samples)
             } catch {}
         }
     }

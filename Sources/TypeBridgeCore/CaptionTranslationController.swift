@@ -93,5 +93,5 @@ public final class CaptionTranslationController: ObservableObject {
         revision = UUID(); task?.cancel(); task = nil; provider?.cancel(); provider = nil; request = nil; pending = []
         if clear { lines = []; completedIDs = []; error = "" }
     }
-    public func showSample(_ values: [CaptionLine]) { stop(clear: true); lines = Array(values.suffix(3)) }
+    public func showSample(_ values: [CaptionLine]) { stop(clear: true); lines = Array(values.suffix(24)) }
 }

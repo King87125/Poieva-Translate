@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
     private var serviceWindow: NSWindow?
     private var profileWindow: NSWindow?
     private var captionWindow: NSWindow?
-    private var captionIsland: CaptionIslandController?
+    private var captionOverlay: CaptionWindowController?
     private var feedbackPanel: NSPanel?
     private var previewPanel: NSPanel?
     private var dismissPreview: DispatchWorkItem?
@@ -37,10 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         model.onShowProfiles = { [weak self] in self?.showProfiles() }
         model.onShowCaptions = { [weak self] in self?.showCaptions() }
         model.captions.onShowSettings = { [weak self] in self?.showCaptions() }
-        model.captions.onShowIsland = { [weak self] in
+        model.captions.onShowCaptionWindow = { [weak self] in
             guard let self else { return }
-            if self.captionIsland == nil { self.captionIsland = CaptionIslandController(model: self.model.captions) }
-            self.captionIsland?.show()
+            if self.captionOverlay == nil { self.captionOverlay = CaptionWindowController(model: self.model.captions) }
+            self.captionOverlay?.show()
         }
         model.onFeedback = { [weak self] in self?.showFeedback() }
         model.onPreviewFeedback = { [weak self] state in self?.showFeedbackPreview(state) }
@@ -63,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTo
         if sender === profileWindow { model.profileGenerationVisible = false }
         if sender === selectionPanel { model.selectionVisible = false }
         if sender === languagePackWindow { model.cancelPreparation() }
-        if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow, profileWindow, captionWindow].compactMap({ $0 }).contains(where: \.isVisible) {
+        if ![window, settingsWindow, languagePackWindow, guideWindow, serviceWindow, profileWindow, captionWindow, captionOverlay?.window].compactMap({ $0 }).contains(where: \.isVisible) {
             NSApp.setActivationPolicy(.accessory)
         }
         return false

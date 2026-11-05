@@ -2,7 +2,19 @@
 
 更新日期：2026-11-05。
 
-最新状态：v0.4.3、构建号 74 新增 Paraformer 实时识别与明确的单路采音选择。274 项完整回归执行通过，零跳过，包含 7 项真实回环 WebSocket 检查。原生应用的公开音频文件已通过 Paraformer 固定协议样例、实际苹果翻译和顶部字幕验证；尚未调用真实 Paraformer 云端模型。此前千问麦克风实测、真实 AI 生成及刘海贴合检查保留为历史记录。签名与公证状态沿用预览版安排。
+最新状态：v0.4.4、构建号 78 将顶部字幕改为标准 macOS 半透明悬浮窗口，支持多条记录回看。29 项字幕与界面语言检查执行通过，零跳过；原生界面验证公开预览、回看/返回最新、透明度、原文开关、系统缩放还原及重启。此前 Paraformer 的 274 项完整回归和公开音频链路验收保留为下方历史记录；本次没有调用收费语音服务。签名与公证状态沿用预览版安排。
+
+## 半透明字幕窗口（v0.4.4，构建 78）
+
+- 移除刘海贴合、单句展示与展开收起布局，改用带原生标题栏的 NSWindow。窗口浮在会议画面上方，支持系统移动、调整大小、缩放和最小化，保存窗口位置与大小；字幕变化不再重新计算或移动窗口。关闭其他 Poieva 窗口时仍将字幕窗口计入应用可见窗口。
+- 复用原有最多 24 条的内存字幕队列，完整显示多条原文与译文，不截断为两行。新字幕默认滚到底部，向上回看停止跟随，返回最新按钮恢复；状态、暂停和设置入口保持可见。关闭字幕窗口会停止并清空本次字幕。
+- 灰色背景使用真实透明度，不对会议画面做模糊；文字保持独立不透明并增加轻微暗色阴影。设置增加背景透明度，默认 35%，可调 10–75%；原有配置缺少该字段时使用默认值，重启后保留。遵循 macOS「降低透明度」。
+- 启用本机公开 WebSocket 样例后，29 项字幕与中英文界面检查全部执行通过，零跳过，正式应用编译通过。没有新增外部依赖、运行本地模型或访问真实收费识别服务。
+- 原生界面使用六条公开双语离线样例，验证多条显示、回看后出现返回最新按钮、点击后回到底部；透明度 35% / 65% 与原文开关实际生效，恢复 35% 和双语显示。系统标题栏缩放及还原通过，完整退出后重新打开仍为 660 × 420 的合适窗口，并保留透明度、23 点字号、原文开关、仅麦克风和 Paraformer 选择。最后保留离线预览供查看，没有采音。
+- 更新中英文 README、字幕教程、开发说明与真实原生截图，旧版顶部字幕的验收图片仅作为历史记录保留。本次未读取会议或私人聊天内容，未更改密钥组件或系统权限。
+- 0.4.4 / 78 安装镜像已只读核验版本、完整应用签名、MIT 文本与 Applications 链接；密钥组件哈希保持 `20220dee935ece2844a6e248f6a655beb4b97b98`。DMG SHA-256：`3e83ff1c1df346706c2221cbf2b8ab66a7861a57056a05c4021ee713b72371d8`。
+
+English: v0.4.4 replaces the display-edge caption strip with a native translucent floating window. It displays the bounded 24-entry in-memory transcript, pauses following during scrollback and offers Back to Latest. Background transparency and original-text controls persist across restarts; native zoom/restore and close behavior were checked with public offline samples. All 29 caption/localization checks executed successfully with the loopback fixture enabled. No real speech API, microphone or meeting content was used for this UI validation.
 
 ## Paraformer 与单路采音（v0.4.3，构建 74）
 

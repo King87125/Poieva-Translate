@@ -9,8 +9,8 @@
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.3/Poieva-Translate-0.4.3.dmg"><strong>下载 Mac 版</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.3">发布说明</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.4/Poieva-Translate-0.4.4.dmg"><strong>下载 Mac 版</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.4">发布说明</a>
 </p>
 
 <p align="center">Apple Silicon（M 系列芯片）· macOS 26+ · English / 简体中文</p>
@@ -27,16 +27,16 @@
 - **中英双向互译。** 自动判断中文或英文，也可以指定其他目标语言。
 - **保留原来的结构。** 保留段落、列表、代码和链接；编辑器提供文字样式时，也会尽量保留。
 - **按自己的习惯使用。** 自定义快捷键、界面语言和加载动效；还可以勾选多个翻译服务，分别查看译文。
-- **顶部实时字幕。** 选择声音来源，配置自己的语音识别 API，复用现有翻译服务，在刘海下方显示双语提词器；也可先离线预览。[设置与验收范围](docs/live-captions.md)。
+- **会议实时字幕。** 选择声音来源，配置自己的语音识别 API，复用现有翻译服务，在半透明悬浮窗里查看多条双语字幕；也可先离线预览。[设置与验收范围](docs/live-captions.md)。
 
 ## 快速开始
 
-1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.3/Poieva-Translate-0.4.3.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
+1. [下载 DMG 安装包](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.4/Poieva-Translate-0.4.4.dmg)，打开后把 **Poieva Translate** 拖进 **Applications（应用程序）**。
 2. 首次打开时，选择 **English** 或 **简体中文**。
 3. 先在翻译窗口里输入或粘贴文字。默认使用苹果系统翻译，无需注册账户或填写密钥；缺少语言包时，在 **设置 → 系统 → 语言包** 下载。
 4. 想在其他应用里翻译，再到 **设置 → 系统 → 辅助功能** 开启权限。只使用翻译窗口，不需要这项权限。
 
-> **开发预览版：** v0.4.3 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
+> **开发预览版：** v0.4.4 尚未完成 Apple Developer ID 签名与公证，macOS 可能拦截首次打开。当前安装包支持 M 系列 Mac，不支持 Intel Mac。详见[分发状态说明](docs/distribution.md)。
 
 ## 三种使用方式
 
@@ -80,19 +80,19 @@
 
 可以导出单个术语库、语气、包含关联配置的场景，或全部方案；JSON 导入保留已有配置和当前场景。AI 翻译直接使用这些要求，苹果翻译需配置自己的 AI 辅助才能应用。详见[配置教程与截图](docs/profiles.md)。
 
-## 顶部实时字幕
+## 实时字幕
 
-从工具栏或菜单栏打开 **实时字幕**，先点 **预览提词器**，不录音、不联网即可查看顶部显示效果。实际识别声音时，在 **模型管理 → 语音识别** 选择 **阿里云 Paraformer**、**千问** 或自己的 **Realtime 转写兼容 API**，选择仅麦克风、仅系统声音或两者，再选翻译服务后开始。单路只开一条识别连接，双路可能分别计费。当前一句字幕从屏幕顶缘贴合刘海展开，收起后按钮位于刘海两侧；可调整字号、原文显示和显示屏，随时暂停。
+从工具栏或菜单栏打开 **实时字幕**，先点 **预览字幕窗口**，不录音、不联网即可查看悬浮窗。实际识别声音时，在 **模型管理 → 语音识别** 选择 **阿里云 Paraformer**、**千问** 或自己的 **Realtime 转写兼容 API**，选择仅麦克风、仅系统声音或两者，再选翻译服务后开始。单路只开一条识别连接，双路可能分别计费。字幕显示在可拖动、可调整大小的半透明灰色窗口里，能同时看到会议画面。可回看最近 24 条记录；新字幕默认自动滚动，向上回看时停止跟随，点击「返回最新字幕」恢复。在字幕设置中调整透明度、字号和原文显示。
 
 开始后音频才会发送到所选识别服务；语音识别服务需单独配置，和免费苹果文字翻译分开。详见[使用教程](docs/live-captions.md)，包含会议应用、浏览器等场景目前的实际验收范围。
 
-![顶部提词器的离线双语样例预览](docs/images/live-captions-zh.jpg)
+![半透明字幕窗口的多条离线双语样例](docs/images/live-captions-window-zh.jpg)
 
 *实机窗口截图，使用公开离线预览文字；会议采集和云端识别仍待真实环境验收。*
 
 ## 几个实用说明
 
-- 关闭窗口后，Poieva 仍留在菜单栏，随时可以继续翻译。
+- 关闭翻译工作台后，Poieva 仍留在菜单栏，随时可以继续翻译。
 - 在 **设置 → 通用设置 → 界面语言** 切换中英文，重新打开应用后生效。
 - 不同编辑器的兼容程度有所区别。遇到无法读取的输入框，可以缩小选区，或把文字粘贴到翻译窗口。详见[兼容性说明](docs/compatibility.md)。
 - 苹果系统翻译免费使用，无需账户或密钥。需要在线服务时，在 **设置 → 模型管理** 添加自己的「自定义 AI」（OpenAI 兼容）或「自定义 HTTP 翻译」配置；当前不提供品牌预设。

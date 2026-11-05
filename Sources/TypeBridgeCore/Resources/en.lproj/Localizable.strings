@@ -668,3 +668,16 @@
 "识别服务的免费额度已耗尽，请在服务商控制台查看。" = "The speech service free quota is exhausted. Check the provider console.";
 "识别服务因账户欠费暂停，请在服务商控制台查看账单。" = "The speech service is suspended due to an overdue balance. Check billing in the provider console.";
 "音频文件" = "Audio file";
+
+// Floating caption window
+"字幕窗口" = "Caption Window";
+"字幕记录" = "Caption History";
+"背景透明度" = "Background Transparency";
+"返回最新字幕" = "Back to Latest";
+"预览字幕窗口" = "Preview Captions";
+"预览字幕窗口（不联网）" = "Preview Captions (Offline)";
+"关闭字幕窗口" = "Close Caption Window";
+"今天先确认项目进度。" = "Let's review the project progress first.";
+"第一版将在下周五完成。" = "The first version will be ready next Friday.";
+"请把反馈记在共享文档里。" = "Please add your feedback to the shared document.";
+"会议结束后，我会发一份简短总结。" = "I'll send a short summary after the meeting.";

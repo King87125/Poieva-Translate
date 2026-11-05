@@ -9,8 +9,8 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
 <p align="center">
-  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.3/Poieva-Translate-0.4.3.dmg"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.3">Release notes</a>
+  <a href="https://github.com/King87125/Poieva-Translate/releases/download/v0.4.4/Poieva-Translate-0.4.4.dmg"><strong>Download for Mac</strong></a>
+  · <a href="https://github.com/King87125/Poieva-Translate/releases/tag/v0.4.4">Release notes</a>
 </p>
 
 <p align="center">Apple Silicon · macOS 26+ · English / 简体中文</p>
@@ -27,16 +27,16 @@
 - **Go both ways.** Chinese ↔ English mode chooses the direction automatically. Other target languages are available too.
 - **Keep the structure.** Preserve paragraphs, lists, code and links, plus text styling when the editor exposes it.
 - **Make it yours.** Choose your shortcuts, interface language and loading animation. Optionally show results from several selected services.
-- **Live captions at the top of your screen.** Choose an audio source, connect your speech recognition API and reuse your translator in a notch-style teleprompter. An offline preview is included. [Setup and validation scope](docs/live-captions.md).
+- **Live captions over your meeting.** Choose an audio source, connect your speech recognition API and reuse your translator in a translucent floating window with scrollback. An offline preview is included. [Setup and validation scope](docs/live-captions.md).
 
 ## Get started
 
-1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.3/Poieva-Translate-0.4.3.dmg), open it and drag **Poieva Translate** to **Applications**.
+1. [Download the DMG](https://github.com/King87125/Poieva-Translate/releases/download/v0.4.4/Poieva-Translate-0.4.4.dmg), open it and drag **Poieva Translate** to **Applications**.
 2. Open the app and choose **English** or **简体中文**.
 3. Start with the translation window: type or paste some text. The built-in Apple translation service needs no account or API key. Download a language pack in **Settings → System → Language Packs** if needed.
 4. To translate text in other apps, enable **Accessibility** from **Settings → System**. The translation window works without this permission.
 
-> **Developer preview:** v0.4.3 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
+> **Developer preview:** v0.4.4 is not yet Developer ID signed or notarized. macOS may block the first launch. This download supports M-series Macs, not Intel Macs. See [distribution status](docs/distribution.md).
 
 ## Three ways to use it
 
@@ -82,17 +82,17 @@ Export a glossary, a tone, a scene with its linked configuration, or all profile
 
 ## Live captions
 
-Open **Live Captions** from the toolbar or menu bar. Start with **Preview Teleprompter** to see the top-of-screen display without recording or networking. For audio captions, add **Alibaba Cloud Paraformer**, **Qwen**, or your own **Realtime transcription-compatible API** in **Model Management → Speech Recognition**, choose microphone-only, system-audio-only or both, select your translator, then start. Single-input modes use one recognition connection; both may be billed separately. The current sentence expands from the display edge around the notch, with compact controls on either side when collapsed; text size, original-text visibility and display are adjustable.
+Open **Live Captions** from the toolbar or menu bar. Start with **Preview Captions** to see the floating window without recording or networking. For audio captions, add **Alibaba Cloud Paraformer**, **Qwen**, or your own **Realtime transcription-compatible API** in **Model Management → Speech Recognition**, choose microphone-only, system-audio-only or both, select your translator, then start. Single-input modes use one recognition connection; both may be billed separately. Captions appear in a movable, resizable window with a translucent gray background, so your meeting stays visible behind it. Scroll through the latest 24 entries; new captions follow automatically until you scroll back. Adjust transparency, text size and original-text visibility in caption settings.
 
 Audio goes to your selected recognition service only after starting. Speech recognition is separate from Apple’s included text translation. [Read the setup guide](docs/live-captions.md), including current live-testing limits for meeting apps and browsers.
 
-![The top teleprompter showing an explicitly labeled offline bilingual sample](docs/images/live-captions-zh.jpg)
+![The translucent caption window with multiple public bilingual sample entries](docs/images/live-captions-window-zh.jpg)
 
 *Actual app capture with public offline sample text; meeting capture and cloud recognition still require live validation.*
 
 ## A few useful details
 
-- Closing the window leaves Poieva in the menu bar, ready for the next translation.
+- Closing the translation window leaves Poieva in the menu bar, ready for the next translation.
 - Change the interface language in **Settings → General → Interface language**, then reopen the app.
 - Cross-app compatibility depends on the editor. If a field cannot be read reliably, select a smaller passage or paste it into the translation window. See [compatibility notes](docs/compatibility.md).
 - Apple Translate is included and needs no account or API key. To use your own online service, add a **Custom AI** (OpenAI-compatible) or **Custom HTTP Translation** configuration in **Settings → Model Management**. There are no provider presets.
